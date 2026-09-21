@@ -1,5 +1,24 @@
 {
   "nodes": {
+    "hbt-data": {
+      "inputs": {
+        "flake-utils": [
+          "utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./test/data",
+        "type": "path"
+      },
+      "original": {
+        "path": "./test/data",
+        "type": "path"
+      },
+      "parent": []
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1789844176,
@@ -18,6 +37,7 @@
     },
     "root": {
       "inputs": {
+        "hbt-data": "hbt-data",
         "nixpkgs": "nixpkgs",
         "utils": "utils"
       }
