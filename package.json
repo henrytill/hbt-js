@@ -1,35 +1,37 @@
 {
-  "name": "hbt",
-  "version": "0.1.0",
-  "description": "Heterogeneous Bookmark Transformation",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "hbt": "dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/henrytill/hbt-js.git"
-  },
-  "author": {
-    "name": "Henry Till",
-    "email": "henrytill@gmail.com"
-  },
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/henrytill/hbt-js/issues"
-  },
-  "homepage": "https://github.com/henrytill/hbt-js#readme",
-  "devDependencies": {
-    "@tsconfig/node24": "^24.0.5",
-    "@types/node": "^24.13.6",
-    "typescript": "^7.0.2"
-  }
+	"name": "hbt",
+	"version": "0.1.0",
+	"description": "Heterogeneous Bookmark Transformation",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"hbt": "dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc",
+		"fmt": "prettier --write .",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/henrytill/hbt-js.git"
+	},
+	"author": {
+		"name": "Henry Till",
+		"email": "henrytill@gmail.com"
+	},
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/henrytill/hbt-js/issues"
+	},
+	"homepage": "https://github.com/henrytill/hbt-js#readme",
+	"devDependencies": {
+		"@tsconfig/node24": "^24.0.5",
+		"@types/node": "^24.13.6",
+		"prettier": "^3.9.8",
+		"typescript": "^7.0.2"
+	}
 }
