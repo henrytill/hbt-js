@@ -1,13 +1,23 @@
 {
   inputs = {
+    self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     utils.url = "github:numtide/flake-utils";
+    # hbt-data's own flake, read from the corpus submodule: a relative path
+    # input locks relative to this flake, not by hash, so the submodule stays
+    # the one pin on the harness and the corpus it checks.
+    hbt-data = {
+      url = "path:./test/data";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "utils";
+    };
   };
   outputs =
     {
       self,
       nixpkgs,
       utils,
+      hbt-data,
     }:
     utils.lib.eachDefaultSystem (
       system:
@@ -27,8 +37,13 @@
       in
       {
         packages.default = hbt;
-        devShell = pkgs.mkShell {
+        checks.conformance = hbt-data.lib.${system}.check {
+          binary = "${hbt}/bin/hbt";
+          waivers = ./conformance.waivers;
+        };
+        devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            hbt-data.packages.${system}.python
             importNpmLock.hooks.linkNodeModulesHook
             nodejs
           ];
