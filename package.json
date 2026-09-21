@@ -1,0 +1,22 @@
+{
+  "name": "hbt",
+  "version": "0.1.0",
+  "description": "Heterogeneous Bookmark Transformation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/henrytill/hbt-js.git"
+  },
+  "author": {
+    "name": "Henry Till",
+    "email": "henrytill@gmail.com"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/henrytill/hbt-js/issues"
+  },
+  "homepage": "https://github.com/henrytill/hbt-js#readme"
+}
