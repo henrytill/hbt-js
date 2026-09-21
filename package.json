@@ -2,8 +2,16 @@
   "name": "hbt",
   "version": "0.1.0",
   "description": "Heterogeneous Bookmark Transformation",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "hbt": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,5 +26,10 @@
   "bugs": {
     "url": "https://github.com/henrytill/hbt-js/issues"
   },
-  "homepage": "https://github.com/henrytill/hbt-js#readme"
+  "homepage": "https://github.com/henrytill/hbt-js#readme",
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.5",
+    "@types/node": "^24.13.6",
+    "typescript": "^7.0.2"
+  }
 }
