@@ -41,6 +41,16 @@ export const mkLabel = (s: string): Label => nonEmpty<'Label'>(s, 'label');
 export const mkExtended = (s: string): Extended => nonEmpty<'Extended'>(s, 'extended');
 
 /**
+ * The widest instant this can hold, in whole seconds: the ECMAScript limit on a Date, +/-8.64e15 ms.
+ *
+ * Number.isSafeInteger alone admits about 285 million years, where hbt-rs rejects anything chrono's DateTime cannot hold
+ * (`parse_timestamp` fails on a timestamp `DateTime::from_timestamp` refuses), so a nonsense ADD_DATE that errors there would
+ * have been accepted here and then differed in the output instead. The two bounds are close but not identical -- chrono stops
+ * a little sooner -- so a value between them is still a divergence, and no fixture pins one.
+ */
+const MAX_TIME = 8_640_000_000_000;
+
+/**
  * Wraps a Unix timestamp, floored to whole seconds so the value in memory is the one on the wire.
  *
  * Floored, not truncated: a pre-epoch fraction has to go to the second below, which is what serializing it gives back.
@@ -53,7 +63,7 @@ export function mkTime(date: Date): Time;
 export function mkTime(value: number | Date): Time {
 	const seconds = value instanceof Date ? value.getTime() / 1000 : value;
 	const floored = Math.floor(seconds);
-	if (!Number.isSafeInteger(floored)) {
+	if (!Number.isInteger(floored) || Math.abs(floored) > MAX_TIME) {
 		throw new ParseError(`timestamp out of range: ${seconds}`);
 	}
 	return floored as Time;

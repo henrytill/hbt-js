@@ -34,8 +34,16 @@ describe('mkTime', () => {
 		assert.equal(mkTime(-1.5), -2);
 	});
 
-	it('rejects a value outside the safe integer range', () => {
+	it('rejects a value that is not a representable instant', () => {
 		assert.throws(() => mkTime(Number.NaN), ParseError);
+		assert.throws(() => mkTime(9e15), ParseError);
+		assert.throws(() => mkTime(-9e15), ParseError);
+		assert.throws(() => mkTime(Number.POSITIVE_INFINITY), ParseError);
+	});
+
+	it('accepts the extremes of the representable range', () => {
+		assert.equal(mkTime(8_640_000_000_000), 8_640_000_000_000);
+		assert.equal(mkTime(-8_640_000_000_000), -8_640_000_000_000);
 	});
 });
 
