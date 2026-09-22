@@ -57,6 +57,33 @@ describe('Collection', () => {
 		assert.deepEqual(collection.entity(id).labels, new Set([mkLabel('keep'), mkLabel('new')]));
 	});
 
+	it('drops a label mapped to null rather than replacing it', () => {
+		const collection = new Collection();
+		const id = collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('drop'), mkLabel('keep')]) }));
+		collection.updateLabels([[mkLabel('drop'), null]]);
+		assert.deepEqual(collection.entity(id).labels, new Set([mkLabel('keep')]));
+	});
+
+	it('does not chain mappings within a pass', () => {
+		const collection = new Collection();
+		const id = collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('a')]) }));
+		collection.updateLabels([
+			[mkLabel('a'), mkLabel('b')],
+			[mkLabel('b'), mkLabel('c')],
+		]);
+		assert.deepEqual(collection.entity(id).labels, new Set([mkLabel('b')]));
+	});
+
+	it('collapses two labels mapped onto one name', () => {
+		const collection = new Collection();
+		const id = collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('x'), mkLabel('y')]) }));
+		collection.updateLabels([
+			[mkLabel('x'), mkLabel('same')],
+			[mkLabel('y'), mkLabel('same')],
+		]);
+		assert.deepEqual(collection.entity(id).labels, new Set([mkLabel('same')]));
+	});
+
 	it('leaves a node whose labels are untouched exactly as it was', () => {
 		const collection = new Collection();
 		const id = collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('keep')]) }));

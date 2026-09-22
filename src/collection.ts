@@ -86,8 +86,16 @@ export class Collection {
 		return this.#nodes;
 	}
 
-	/** Replaces each label that is a key of `mappings` with its value. */
-	updateLabels(mappings: Iterable<readonly [Label, Label]>): void {
+	/**
+	 * Replaces each label that is a key of `mappings` with its value; a `null` value drops the label instead.
+	 *
+	 * A mappings file mapping a label to the empty string reads as a deletion, settled in henrytill/hbt-go#73 and recorded in
+	 * henrytill/hbt-hs#42. The empty string never reaches here -- `mkLabel` refuses it -- so the reader turns it into `null`.
+	 *
+	 * Substitutions are collected from the labels the node had, so mappings do not chain within a pass: with `a -> b` and
+	 * `b -> c`, a label `a` becomes `b`, not `c`. Two labels mapped onto one name collapse, labels being a set.
+	 */
+	updateLabels(mappings: Iterable<readonly [Label, Label | null]>): void {
 		const mapping = new Map(mappings);
 		if (mapping.size === 0) {
 			return;
@@ -96,13 +104,15 @@ export class Collection {
 			let replaced = false;
 			const labels = new Set<Label>();
 			for (const label of node.labels) {
-				const mapped = mapping.get(label);
-				if (mapped === undefined) {
+				if (!mapping.has(label)) {
 					labels.add(label);
-				} else {
-					labels.add(mapped);
-					replaced = true;
+					continue;
 				}
+				const mapped = mapping.get(label);
+				if (mapped != null) {
+					labels.add(mapped);
+				}
+				replaced = true;
 			}
 			return replaced ? mkEntity({ ...node, labels }) : node;
 		});
