@@ -76,7 +76,7 @@ export function mkEntity(init: EntityInit): Entity {
 	};
 }
 
-const setEquals = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean => a.size === b.size && [...a].every((x) => b.has(x));
+const setEquals = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean => a.size === b.size && a.isSubsetOf(b);
 
 const setUnion = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> => new Set([...a, ...b]);
 
