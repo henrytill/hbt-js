@@ -15,11 +15,11 @@ export class ParseError extends Error {
 }
 
 export function mkUrl(s: string): Url {
-	try {
-		return new URL(s).href as Url;
-	} catch {
+	const url = URL.parse(s);
+	if (url === null) {
 		throw new ParseError(`URL parsing error: ${s}`);
 	}
+	return url.href as Url;
 }
 
 export const mkName = (s: string): Name => s as Name;
