@@ -78,8 +78,6 @@ export function mkEntity(init: EntityInit): Entity {
 
 const setEquals = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean => a.size === b.size && a.isSubsetOf(b);
 
-const setUnion = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> => new Set([...a, ...b]);
-
 export function entityEquals(a: Entity, b: Entity): boolean {
 	return (
 		a.url === b.url &&
@@ -113,28 +111,24 @@ export function entityMerge(entity: Entity, other: Entity): Entity {
 	if (entityEquals(entity, other)) {
 		return entity;
 	}
-	const updatedAt = setUnion(entity.updatedAt, other.updatedAt);
-	for (const t of [entity.createdAt, other.createdAt]) {
-		if (t !== undefined) updatedAt.add(t);
-	}
-	const merged: {
-		-readonly [K in keyof Entity]: Entity[K];
-	} = {
+	const updatedAt = entity.updatedAt.union(other.updatedAt);
+	if (entity.createdAt !== undefined) updatedAt.add(entity.createdAt);
+	if (other.createdAt !== undefined) updatedAt.add(other.createdAt);
+	const createdAt = combine(entity.createdAt, other.createdAt, (a, b) => (a < b ? a : b));
+	const shared = combine(entity.shared, other.shared, (a, b) => a || b);
+	const toRead = combine(entity.toRead, other.toRead, (a, b) => a || b);
+	const isFeed = combine(entity.isFeed, other.isFeed, (a, b) => a || b);
+	const lastVisitedAt = combine(entity.lastVisitedAt, other.lastVisitedAt, (a, b) => (a > b ? a : b));
+	return mkEntity({
 		url: entity.url,
 		updatedAt,
-		names: setUnion(entity.names, other.names),
-		labels: setUnion(entity.labels, other.labels),
-		extended: setUnion(entity.extended, other.extended),
-	};
-	const optional = {
-		createdAt: combine(entity.createdAt, other.createdAt, Math.min) as Time | undefined,
-		shared: combine(entity.shared, other.shared, (a, b) => a || b),
-		toRead: combine(entity.toRead, other.toRead, (a, b) => a || b),
-		isFeed: combine(entity.isFeed, other.isFeed, (a, b) => a || b),
-		lastVisitedAt: combine(entity.lastVisitedAt, other.lastVisitedAt, Math.max) as Time | undefined,
-	};
-	for (const [key, value] of Object.entries(optional)) {
-		if (value !== undefined) Object.assign(merged, { [key]: value });
-	}
-	return mkEntity(merged);
+		names: entity.names.union(other.names),
+		labels: entity.labels.union(other.labels),
+		extended: entity.extended.union(other.extended),
+		...(createdAt !== undefined && { createdAt }),
+		...(shared !== undefined && { shared }),
+		...(toRead !== undefined && { toRead }),
+		...(isFeed !== undefined && { isFeed }),
+		...(lastVisitedAt !== undefined && { lastVisitedAt }),
+	});
 }
