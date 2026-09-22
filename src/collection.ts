@@ -22,7 +22,11 @@ export class Id {
 	}
 }
 
-/** A graph of entities: nodes plus adjacency lists, with a URL index so one URL is one node. */
+/**
+ * A graph of entities: nodes plus adjacency lists, with a URL index.
+ *
+ * `upsert` is what keeps one URL to one node; `insert` appends unconditionally. See the note there.
+ */
 export class Collection {
 	readonly #token = {};
 	#nodes: Entity[] = [];
@@ -60,6 +64,14 @@ export class Collection {
 		return index === undefined ? undefined : this.#makeId(index);
 	}
 
+	/**
+	 * Appends a node and points the URL index at it, without checking whether the collection already holds the URL.
+	 *
+	 * Inserting a URL twice therefore leaves two nodes for it, with the index naming only the second and the first reachable
+	 * through `entities()` but not through `id`. hbt-rs has the same hole and records it on `from_posts`, whose regression
+	 * test notes that inserting an export that lists one href twice "produced two nodes for one URL, with `urls` indexing
+	 * only the last of them". `upsert` is the entry point that merges instead, and is what a parser should call.
+	 */
 	insert(entity: Entity): Id {
 		const index = this.#nodes.length;
 		this.#nodes.push(entity);
