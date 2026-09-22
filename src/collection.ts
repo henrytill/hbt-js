@@ -89,12 +89,22 @@ export class Collection {
 	/** Replaces each label that is a key of `mappings` with its value. */
 	updateLabels(mappings: Iterable<readonly [Label, Label]>): void {
 		const mapping = new Map(mappings);
+		if (mapping.size === 0) {
+			return;
+		}
 		this.#nodes = this.#nodes.map((node) => {
+			let replaced = false;
 			const labels = new Set<Label>();
 			for (const label of node.labels) {
-				labels.add(mapping.get(label) ?? label);
+				const mapped = mapping.get(label);
+				if (mapped === undefined) {
+					labels.add(label);
+				} else {
+					labels.add(mapped);
+					replaced = true;
+				}
 			}
-			return mkEntity({ ...node, labels });
+			return replaced ? mkEntity({ ...node, labels }) : node;
 		});
 	}
 }
