@@ -8,7 +8,8 @@
 		"hbt": "dist/index.js"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"!dist/**/*.test.*"
 	],
 	"scripts": {
 		"build": "tsc",
