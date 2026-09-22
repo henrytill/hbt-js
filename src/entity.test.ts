@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ParseError, mkEntity, entityEquals, entityMerge, mkExtended, mkLabel, mkName, mkTime, mkUrl } from './entity.js';
+import { type EntityInit, ParseError, mkEntity, entityEquals, entityMerge, mkExtended, mkLabel, mkName, mkTime, mkUrl } from './entity.js';
 
 const testUrl = mkUrl('https://example.com/');
 
@@ -44,6 +44,46 @@ describe('mkEntity', () => {
 		const entity = mkEntity({ url: testUrl, createdAt: mkTime(10), updatedAt: new Set([mkTime(5)]) });
 		assert.deepEqual([...entity.updatedAt], [5]);
 	});
+});
+
+describe('entityEquals', () => {
+	const full = mkEntity({
+		url: testUrl,
+		createdAt: mkTime(10),
+		updatedAt: new Set([mkTime(5)]),
+		names: new Set([mkName('n')]),
+		labels: new Set([mkLabel('l')]),
+		extended: new Set([mkExtended('x')]),
+		shared: true,
+		toRead: false,
+		isFeed: true,
+		lastVisitedAt: mkTime(9),
+	});
+
+	// One differing value per field of Entity. The table is keyed by keyof EntityInit, so a field added to the entity does not
+	// compile until it has a case here, and the case then fails until entityEquals actually looks at the field.
+	const differing: { readonly [K in keyof EntityInit]-?: Partial<EntityInit> } = {
+		url: { url: mkUrl('https://other.example/') },
+		createdAt: { createdAt: mkTime(11) },
+		updatedAt: { updatedAt: new Set([mkTime(6)]) },
+		names: { names: new Set([mkName('m')]) },
+		labels: { labels: new Set([mkLabel('k')]) },
+		extended: { extended: new Set([mkExtended('y')]) },
+		shared: { shared: false },
+		toRead: { toRead: true },
+		isFeed: { isFeed: false },
+		lastVisitedAt: { lastVisitedAt: mkTime(8) },
+	};
+
+	it('holds for an entity rebuilt from the same init', () => {
+		assert.ok(entityEquals(full, mkEntity({ ...full })));
+	});
+
+	for (const [field, override] of Object.entries(differing)) {
+		it(`fails when ${field} differs`, () => {
+			assert.ok(!entityEquals(full, mkEntity({ ...full, ...override })));
+		});
+	}
 });
 
 describe('entityMerge', () => {
