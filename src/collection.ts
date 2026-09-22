@@ -1,9 +1,25 @@
 import { type Entity, type Label, type Url, mkEntity, entityMerge } from './entity.js';
 
-/** A handle on one node, valid only for the collection that issued it. */
-export interface Id {
+/**
+ * A handle on one node, valid only for the collection that issued it.
+ *
+ * The owning collection's token is held privately, which makes this nominal -- an object with the right shape is not an `Id`
+ * -- and means a handle cannot be rebuilt for a different index, since nothing outside the issuing collection can obtain the
+ * token to put in it.
+ */
+export class Id {
+	readonly #owner: object;
 	readonly index: number;
-	readonly owner: object;
+
+	constructor(index: number, owner: object) {
+		this.index = index;
+		this.#owner = owner;
+	}
+
+	/** True when this handle was issued by the collection holding `token`. */
+	isOwnedBy(token: object): boolean {
+		return this.#owner === token;
+	}
 }
 
 /** A graph of entities: nodes plus adjacency lists, with a URL index so one URL is one node. */
@@ -14,12 +30,16 @@ export class Collection {
 	#urls = new Map<Url, number>();
 
 	#makeId(index: number): Id {
-		return { index, owner: this.#token };
+		return new Id(index, this.#token);
 	}
 
 	#checkId(id: Id): void {
-		if (id.owner !== this.#token) {
+		if (!id.isOwnedBy(this.#token)) {
 			throw new Error('Id belongs to a different collection');
+		}
+		// Unreachable from outside, the token being unobtainable, but the node lookups assert non-null on this index.
+		if (!Number.isInteger(id.index) || id.index < 0 || id.index >= this.#nodes.length) {
+			throw new RangeError(`Id index out of range: ${id.index}`);
 		}
 	}
 
