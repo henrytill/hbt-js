@@ -15,6 +15,14 @@ describe('mkUrl', () => {
 	});
 });
 
+describe('mkName, mkLabel, mkExtended', () => {
+	it('refuse the empty string, which does not round-trip', () => {
+		assert.throws(() => mkName(''), ParseError);
+		assert.throws(() => mkLabel(''), ParseError);
+		assert.throws(() => mkExtended(''), ParseError);
+	});
+});
+
 describe('mkTime', () => {
 	it('truncates to whole seconds', () => {
 		assert.equal(mkTime(1.9), 1);
