@@ -56,4 +56,12 @@ describe('Collection', () => {
 		collection.updateLabels([[mkLabel('old'), mkLabel('new')]]);
 		assert.deepEqual([...collection.entity(id).labels].sort(), ['keep', 'new']);
 	});
+
+	it('leaves a node whose labels are untouched exactly as it was', () => {
+		const collection = new Collection();
+		const id = collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('keep')]) }));
+		const before = collection.entity(id);
+		collection.updateLabels([[mkLabel('old'), mkLabel('new')]]);
+		assert.equal(collection.entity(id), before);
+	});
 });
