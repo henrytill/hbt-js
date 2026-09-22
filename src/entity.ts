@@ -22,9 +22,23 @@ export function mkUrl(s: string): Url {
 	return url.href as Url;
 }
 
-export const mkName = (s: string): Name => s as Name;
-export const mkLabel = (s: string): Label => s as Label;
-export const mkExtended = (s: string): Extended => s as Extended;
+/**
+ * Refuses the empty string.
+ *
+ * An empty name, label or description is a value the formatters write and the readers drop, so a collection carrying one does
+ * not round-trip. Enforcing it here rather than at each parse site means no producer can make one -- see hbt-ocaml's
+ * `Entity.Empty`, which refuses it on the same ground.
+ */
+function nonEmpty<B extends string>(s: string, what: string): Brand<string, B> {
+	if (s === '') {
+		throw new ParseError(`${what} must not be empty`);
+	}
+	return s as Brand<string, B>;
+}
+
+export const mkName = (s: string): Name => nonEmpty<'Name'>(s, 'name');
+export const mkLabel = (s: string): Label => nonEmpty<'Label'>(s, 'label');
+export const mkExtended = (s: string): Extended => nonEmpty<'Extended'>(s, 'extended');
 
 /** Wraps a Unix timestamp, truncated to whole seconds so the value in memory is the one on the wire. */
 export function mkTime(seconds: number): Time;
