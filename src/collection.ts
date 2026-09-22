@@ -28,7 +28,7 @@ export class Collection {
 	}
 
 	get isEmpty(): boolean {
-		return this.#nodes.length === 0;
+		return this.length === 0;
 	}
 
 	contains(url: Url): boolean {
