@@ -143,7 +143,7 @@ function combine<T>(a: T | undefined, b: T | undefined, f: (a: T, b: T) => T): T
 /**
  * Absorbs `other` into `entity`, returning the result.
  *
- * Merging is field-wise. The earlier creation time wins; both creation times go into the update history and `create` takes the
+ * Merging is field-wise. The earlier creation time wins; both creation times go into the update history and `mkEntity` takes the
  * winner back out, which is what keeps merging associative. Merging an entity that already equals `entity` is a no-op.
  * Flags combine with `||`; `lastVisitedAt` keeps the most recent time.
  */
