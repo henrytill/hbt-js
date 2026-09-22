@@ -24,9 +24,14 @@ describe('mkName, mkLabel, mkExtended', () => {
 });
 
 describe('mkTime', () => {
-	it('truncates to whole seconds', () => {
+	it('floors to whole seconds', () => {
 		assert.equal(mkTime(1.9), 1);
 		assert.equal(mkTime(new Date(1500)), 1);
+	});
+
+	it('floors a pre-epoch fraction to the second below, as hbt-rs does', () => {
+		assert.equal(mkTime(new Date(-500)), -1);
+		assert.equal(mkTime(-1.5), -2);
 	});
 
 	it('rejects a value outside the safe integer range', () => {

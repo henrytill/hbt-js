@@ -40,16 +40,23 @@ export const mkName = (s: string): Name => nonEmpty<'Name'>(s, 'name');
 export const mkLabel = (s: string): Label => nonEmpty<'Label'>(s, 'label');
 export const mkExtended = (s: string): Extended => nonEmpty<'Extended'>(s, 'extended');
 
-/** Wraps a Unix timestamp, truncated to whole seconds so the value in memory is the one on the wire. */
+/**
+ * Wraps a Unix timestamp, floored to whole seconds so the value in memory is the one on the wire.
+ *
+ * Floored, not truncated: a pre-epoch fraction has to go to the second below, which is what serializing it gives back.
+ * hbt-rs pins this (`parse_flexible_truncates_pre_epoch_sub_second_precision` asserts `1969-12-31T23:59:59.500Z` is `-1`),
+ * and a Pinboard `time` is RFC 3339 and may carry a fraction, so truncating toward zero would disagree by a second on every
+ * pre-epoch post.
+ */
 export function mkTime(seconds: number): Time;
 export function mkTime(date: Date): Time;
 export function mkTime(value: number | Date): Time {
 	const seconds = value instanceof Date ? value.getTime() / 1000 : value;
-	const truncated = Math.trunc(seconds);
-	if (!Number.isSafeInteger(truncated)) {
+	const floored = Math.floor(seconds);
+	if (!Number.isSafeInteger(floored)) {
 		throw new ParseError(`timestamp out of range: ${seconds}`);
 	}
-	return truncated as Time;
+	return floored as Time;
 }
 
 /**
