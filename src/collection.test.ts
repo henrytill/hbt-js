@@ -18,8 +18,12 @@ describe('Collection', () => {
 		const collection = new Collection();
 		const id = collection.insert(a);
 		assert.ok(collection.contains(a.url));
-		assert.deepEqual(collection.id(a.url), id);
-		assert.equal(collection.entity(id), a);
+		const found = collection.id(a.url);
+		// Compared by index and round-tripped, not with deepEqual: node's deep equality does not look at #private fields, so
+		// it holds between handles from different collections and would not notice id() returning a foreign one.
+		assert.ok(found !== undefined);
+		assert.equal(found.index, id.index);
+		assert.equal(collection.entity(found), a);
 		assert.equal(collection.id(b.url), undefined);
 	});
 
@@ -37,7 +41,8 @@ describe('Collection', () => {
 		const first = collection.upsert(mkEntity({ ...a, createdAt: mkTime(20) }));
 		const second = collection.upsert(mkEntity({ ...a, createdAt: mkTime(10) }));
 		assert.equal(collection.length, 1);
-		assert.deepEqual(first, second);
+		assert.equal(first.index, second.index);
+		assert.equal(collection.entity(second).createdAt, 10);
 		assert.equal(collection.entity(first).createdAt, 10);
 	});
 
