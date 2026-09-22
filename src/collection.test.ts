@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { Collection } from './collection.js';
+import { Collection, Id } from './collection.js';
 import { mkEntity, mkLabel, mkTime, mkUrl } from './entity.js';
 
 const a = mkEntity({ url: mkUrl('https://a.example/') });
@@ -42,6 +42,19 @@ describe('Collection', () => {
 		assert.deepEqual(collection.edges(y), []);
 		collection.addEdges(x, y);
 		assert.deepEqual(collection.edges(y), [x]);
+	});
+
+	it('does not accept a bare object as an Id', () => {
+		const collection = new Collection();
+		collection.insert(a);
+		// @ts-expect-error Id holds its owner privately, so an object of the right shape is not one
+		assert.throws(() => collection.entity({ index: 0, owner: {} }));
+	});
+
+	it("refuses an Id built without the issuing collection's token", () => {
+		const collection = new Collection();
+		collection.insert(a);
+		assert.throws(() => collection.entity(new Id(0, {})), /different collection/);
 	});
 
 	it('refuses an Id from another collection', () => {
