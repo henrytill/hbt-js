@@ -102,8 +102,9 @@ export class Collection {
 		return this.#edges[id.index]!.map((index) => this.#makeId(index));
 	}
 
+	/** A snapshot of the nodes. Copied, because updateLabels replaces the array and a handed-out reference would go stale. */
 	entities(): readonly Entity[] {
-		return this.#nodes;
+		return [...this.#nodes];
 	}
 
 	/**

@@ -63,6 +63,15 @@ describe('Collection', () => {
 		assert.throws(() => new Collection().entity(foreign), /different collection/);
 	});
 
+	it('gives entities() callers a snapshot, not the live array', () => {
+		const collection = new Collection();
+		collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('old')]) }));
+		const before = collection.entities();
+		collection.updateLabels([[mkLabel('old'), mkLabel('new')]]);
+		assert.deepEqual([...before[0]!.labels], [mkLabel('old')]);
+		assert.deepEqual([...collection.entities()[0]!.labels], [mkLabel('new')]);
+	});
+
 	it('replaces labels according to the mappings', () => {
 		const collection = new Collection();
 		const id = collection.insert(mkEntity({ ...a, labels: new Set([mkLabel('old'), mkLabel('keep')]) }));
