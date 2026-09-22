@@ -70,8 +70,8 @@ describe('entityMerge', () => {
 			}),
 			mkEntity({ url: testUrl, names: new Set([mkName('b')]), labels: new Set([mkLabel('y')]) }),
 		);
-		assert.deepEqual([...merged.names].sort(), ['a', 'b']);
-		assert.deepEqual([...merged.labels].sort(), ['x', 'y']);
+		assert.deepEqual(merged.names, new Set([mkName('a'), mkName('b')]));
+		assert.deepEqual(merged.labels, new Set([mkLabel('x'), mkLabel('y')]));
 		assert.deepEqual([...merged.extended], ['e']);
 	});
 
@@ -102,6 +102,6 @@ describe('entityMerge', () => {
 		const left = entityMerge(entityMerge(a, b), c);
 		const right = entityMerge(a, entityMerge(b, c));
 		assert.ok(entityEquals(left, right));
-		assert.deepEqual([...left.updatedAt].sort(), [20, 30]);
+		assert.deepEqual(left.updatedAt, new Set([mkTime(20), mkTime(30)]));
 	});
 });
