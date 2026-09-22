@@ -52,7 +52,16 @@ export function mkTime(value: number | Date): Time {
 	return truncated as Time;
 }
 
-export interface Entity {
+/**
+ * A bookmark, in normal form.
+ *
+ * `mkEntity` is the only thing here that builds one, and it is what holds the normal form: an update never repeats
+ * `createdAt`, since it would carry no information `createdAt` does not. An update strictly below `createdAt` is a different
+ * thing and stays. The other implementations guarantee this at runtime rather than in the type -- hbt-rs with a
+ * `debug_assert!(self.is_normal())` on serialize, hbt-go with a `Normalize()` call at the parse and decode boundaries -- and
+ * this should grow the same check at the serialize and decode boundaries when they land.
+ */
+export type Entity = {
 	readonly url: Url;
 	/** Absent for an undated mention: an absent time is the identity of a merge, not a very old instant. */
 	readonly createdAt?: Time;
@@ -65,7 +74,7 @@ export interface Entity {
 	readonly isFeed?: boolean;
 	readonly extended: ReadonlySet<Extended>;
 	readonly lastVisitedAt?: Time;
-}
+};
 
 export type EntityInit = Partial<Omit<Entity, 'url'>> & { readonly url: Url };
 
