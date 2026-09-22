@@ -23,6 +23,15 @@ describe('Collection', () => {
 		assert.equal(collection.id(b.url), undefined);
 	});
 
+	it('insert does not deduplicate, leaving the index on the later node', () => {
+		const collection = new Collection();
+		const first = collection.insert(a);
+		const second = collection.insert(a);
+		assert.equal(collection.length, 2);
+		assert.notEqual(first.index, second.index);
+		assert.equal(collection.id(a.url)?.index, second.index);
+	});
+
 	it('upsert merges into the existing node rather than adding one', () => {
 		const collection = new Collection();
 		const first = collection.upsert(mkEntity({ ...a, createdAt: mkTime(20) }));
