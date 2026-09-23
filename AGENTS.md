@@ -37,7 +37,7 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 ## Layout
 
-A single npm package, ESM (`"type": "module"`), compiled by `tsc` from `src/` to `dist/`.
+A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` to `dist/`. `tsc` only typechecks (`noEmit`), as the `prebuild` script; `build.mjs` then writes every output:
 
 | File                | Role                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
@@ -48,7 +48,11 @@ A single npm package, ESM (`"type": "module"`), compiled by `tsc` from `src/` to
 | `src/*.test.ts`     | Unit tests, beside the code they cover                                                              |
 | `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
 
-`package.json` excludes `dist/**/*.test.*` from `files`, so the compiled tests are built but not published.
+- `dist/cli.js` - the CLI, for node.
+- `dist/browser/hbt.js` - the library, for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose dependencies that bundle for both platforms.**
+- `dist/test/node/` - one bundle per test file.
+
+Every bundle carries its dependencies, and esbuild resolves each package's `browser`/`node` export condition by platform, so the node and browser outputs may contain different builds of the same dependency. `package.json` excludes `dist/test` from `files`, so the tests are built but not published.
 
 ### `entity.ts`
 
@@ -73,11 +77,11 @@ A single npm package, ESM (`"type": "module"`), compiled by `tsc` from `src/` to
 
 Two layers today: unit tests beside the code, and the conformance harness against the built CLI.
 
-**Unit tests.** `node --test` over the _compiled_ tests, so `npm test` runs `tsc` first:
+**Unit tests.** `node --test` over the _bundled_ tests, so `npm test` builds first (its `pretest` script):
 
 ```sh
-npm test                                  # tsc, then every dist/**/*.test.js
-node --test dist/entity.test.js           # one file, after a build
+npm test                                     # typecheck, build, then every dist/test/node/**/*.test.js
+node --test dist/test/node/entity.test.js    # one file, after a build
 ```
 
 They are the only thing actually covering this repo right now. Write them against the exported API rather than internals - `Id`'s owner is private precisely so that nothing, tests included, can reach around it.
@@ -110,8 +114,8 @@ There is no system-wide toolchain: node, npm and the harness's Python come from 
 
 ```sh
 nix develop          # then work normally; linkNodeModulesHook links node_modules
-npm run build        # tsc
-npm test             # tsc, then node --test
+npm run build        # tsc (typecheck only), then build.mjs
+npm test             # npm run build, then node --test
 npm run fmt          # prettier --write .
 ```
 
@@ -121,7 +125,7 @@ The dev shell's `linkNodeModulesHook` links `node_modules` from the lockfile, so
 npm install --package-lock-only --save-dev <dep>   # or without --save-dev for a runtime dep
 ```
 
-Then leave and re-enter the shell, so the hook relinks from the new lockfile. The lockfile is the input Nix builds from - `importNpmLock` reads it - so a dependency change that does not reach it builds against the old tree.
+**That command does write one file into the tree: `node_modules/.package-lock.json`, replacing the hook's link with a regular file.** The hook then prints `cowardly refusing to link` and leaves every package, the new one included, unlinked. Delete that file, then leave and re-enter the shell, so the hook relinks from the new lockfile. The lockfile is the input Nix builds from - `importNpmLock` reads it - so a dependency change that does not reach it builds against the old tree.
 
 ### Nix
 
