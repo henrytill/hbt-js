@@ -43,7 +43,7 @@ A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` t
 | ------------------- | --------------------------------------------------------------------------------------------------- |
 | `src/entity.ts`     | The branded types, `Entity`, `mkEntity`, `entityEquals`, `entityMerge`, `ParseError`                |
 | `src/collection.ts` | `Id` and `Collection` - the graph, the URL index, `upsert`, `updateLabels`                          |
-| `src/index.ts`      | The library's entry point: re-exports the modules above                                             |
+| `src/index.ts`      | The library's entry point: re-exports each module above as a namespace (`entity`, `collection`)     |
 | `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                   |
 | `src/*.test.ts`     | Unit tests, beside the code they cover                                                              |
 | `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it     |
