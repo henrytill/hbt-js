@@ -7,16 +7,27 @@ type Brand<T, B extends string> = T & { readonly [brand]: B };
  * address are the same key.
  */
 export type Url = Brand<string, 'Url'>;
+/** A title a source gave the bookmark, such as a link's text. */
 export type Name = Brand<string, 'Name'>;
+/** A tag. */
 export type Label = Brand<string, 'Label'>;
+/**
+ * A longer description: Pinboard's `extended`, or the `<DD>` after an
+ * HTML anchor.
+ */
 export type Extended = Brand<string, 'Extended'>;
 /** Whole seconds since the Unix epoch: the form on the wire. */
 export type Time = Brand<number, 'Time'>;
 
+/** Thrown when input cannot be made into one of these types. */
 export class ParseError extends Error {
 	override readonly name = 'ParseError';
 }
 
+/**
+ * Parses a URL into its normalized form, throwing a `ParseError` if
+ * it is not one.
+ */
 export function mkUrl(s: string): Url {
 	const url = URL.parse(s);
 	if (url === null) {
@@ -41,8 +52,11 @@ function nonEmpty<B extends string>(s: string, what: string): Brand<string, B> {
 	return s as Brand<string, B>;
 }
 
+/** Wraps a name, refusing the empty string. */
 export const mkName = (s: string): Name => nonEmpty<'Name'>(s, 'name');
+/** Wraps a label, refusing the empty string. */
 export const mkLabel = (s: string): Label => nonEmpty<'Label'>(s, 'label');
+/** Wraps a description, refusing the empty string. */
 export const mkExtended = (s: string): Extended => nonEmpty<'Extended'>(s, 'extended');
 
 /**
@@ -91,6 +105,7 @@ export function mkTime(value: number | Date): Time {
  * strictly below `createdAt` is a different thing and stays.
  */
 export type Entity = {
+	/** The key: two entities with one URL are one bookmark. */
 	readonly url: Url;
 	/**
 	 * Absent for an undated mention: an absent time is the identity
@@ -99,15 +114,30 @@ export type Entity = {
 	readonly createdAt?: Time;
 	/** Updates, never including `createdAt`. */
 	readonly updatedAt: ReadonlySet<Time>;
+	/** Every title the sources gave, since a merge keeps them all. */
 	readonly names: ReadonlySet<Name>;
+	/**
+	 * Tags: Pinboard's `tags`, an HTML anchor's `TAGS` and enclosing
+	 * folders, or the headings above a Markdown link.
+	 */
 	readonly labels: ReadonlySet<Label>;
+	/**
+	 * Whether the bookmark is public: Pinboard's `shared`, or the
+	 * inverse of an HTML anchor's `PRIVATE`.
+	 */
 	readonly shared?: boolean;
+	/** Pinboard's `toread`, or an HTML anchor's `TOREAD`. */
 	readonly toRead?: boolean;
+	/** An HTML anchor's `FEED`. */
 	readonly isFeed?: boolean;
+	/** Every longer description the sources gave. */
 	readonly extended: ReadonlySet<Extended>;
+	/** An HTML anchor's `LAST_VISIT`. */
 	readonly lastVisitedAt?: Time;
 };
 
+/** What `mkEntity` takes: an entity with every field but `url`
+    optional. */
 export type EntityInit = Partial<Omit<Entity, 'url'>> & { readonly url: Url };
 
 /**
@@ -140,6 +170,10 @@ export function mkEntity(init: EntityInit): Entity {
 
 const setEquals = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean => a.size === b.size && a.isSubsetOf(b);
 
+/**
+ * Returns whether two entities agree on every field, comparing sets
+ * by membership.
+ */
 export function entityEquals(a: Entity, b: Entity): boolean {
 	return (
 		a.url === b.url &&

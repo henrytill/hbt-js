@@ -11,6 +11,7 @@ import { type Entity, type Label, type Url, mkEntity, entityMerge } from './enti
  */
 export class Id {
 	readonly #owner: object;
+	/** The node's position in the issuing collection. */
 	readonly index: number;
 
 	constructor(index: number, owner: object) {
@@ -63,6 +64,8 @@ export class Collection {
 		return this.#urls.has(url);
 	}
 
+	/** Returns the handle for the node with `url`, if there is
+     one. */
 	id(url: Url): Id | undefined {
 		const index = this.#urls.get(url);
 		return index === undefined ? undefined : this.#makeId(index);
@@ -102,6 +105,8 @@ export class Collection {
 		return id;
 	}
 
+	/** Adds an edge from `from` to `to`, unless it is already
+     there. */
 	addEdge(from: Id, to: Id): void {
 		this.#checkId(from);
 		this.#checkId(to);
@@ -111,16 +116,19 @@ export class Collection {
 		}
 	}
 
+	/** Adds edges in both directions between `from` and `to`. */
 	addEdges(from: Id, to: Id): void {
 		this.addEdge(from, to);
 		this.addEdge(to, from);
 	}
 
+	/** Returns the entity `id` names. */
 	entity(id: Id): Entity {
 		this.#checkId(id);
 		return this.#nodes[id.index]!;
 	}
 
+	/** Returns the handles `id` has edges to, in the order added. */
 	edges(id: Id): Id[] {
 		this.#checkId(id);
 		return this.#edges[id.index]!.map((index) => this.#makeId(index));
