@@ -3,9 +3,8 @@
 	"version": "0.1.0",
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
-	"main": "dist/index.js",
 	"bin": {
-		"hbt": "dist/index.js"
+		"hbt": "dist/cli.js"
 	},
 	"files": [
 		"dist",
