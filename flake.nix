@@ -41,6 +41,17 @@
           binary = "${hbt}/bin/hbt";
           waivers = ./conformance.waivers;
         };
+        # The unit tests again, in headless Chromium, by the script
+        # `npm run test:browser` runs, against the tests this build
+        # bundled for the browser.
+        checks.browser = hbt.overrideAttrs (old: {
+          pname = "hbt-browser-check";
+          nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.chromium ];
+          installPhase = ''
+            node test/browser/run.mjs
+            touch $out
+          '';
+        });
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             hbt-data.packages.${system}.python

@@ -46,11 +46,13 @@ A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` t
 | `src/index.ts`      | The library's entry point: re-exports the modules above                                             |
 | `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                   |
 | `src/*.test.ts`     | Unit tests, beside the code they cover                                                              |
+| `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it     |
 | `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
 
 - `dist/cli.js` - the CLI, for node.
 - `dist/browser/hbt.js` - the library, for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose dependencies that bundle for both platforms.**
 - `dist/test/node/` - one bundle per test file.
+- `dist/test/browser/` - every test file in one classic script, beside the page that loads it.
 
 Every bundle carries its dependencies, and esbuild resolves each package's `browser`/`node` export condition by platform, so the node and browser outputs may contain different builds of the same dependency. `package.json` excludes `dist/test` from `files`, so the tests are built but not published.
 
@@ -75,7 +77,7 @@ Every bundle carries its dependencies, and esbuild resolves each package's `brow
 
 ## Testing
 
-Two layers today: unit tests beside the code, and the conformance harness against the built CLI.
+Two layers today: unit tests beside the code, run under node and again in a browser, and the conformance harness against the built CLI.
 
 **Unit tests.** `node --test` over the _bundled_ tests, so `npm test` builds first (its `pretest` script):
 
@@ -85,6 +87,15 @@ node --test dist/test/node/entity.test.js    # one file, after a build
 ```
 
 They are the only thing actually covering this repo right now. Write them against the exported API rather than internals - `Id`'s owner is private precisely so that nothing, tests included, can reach around it.
+
+**The same unit tests in a browser.** `build.mjs` bundles them a second time for the browser, with `node:test` and `node:assert/strict` aliased to the stand-ins in `test/browser/`, and `test/browser/run.mjs` loads the page in headless Chromium (`--dump-dom`) and reads the report the stand-in writes into it. It needs no Nix: any Chromium or Chrome will do.
+
+```sh
+npm run test:browser                                  # build, then run under `chromium` from PATH
+CHROMIUM=/path/to/chrome npm run test:browser         # any other Chromium or Chrome binary
+```
+
+This is the run that shows the library behaves the same in both places, which matters most once a parser takes an injected `DOMParser`: node's tests get the CLI's, the browser's get the native one. The stand-ins implement only what the tests use - `describe`, `it`, and `ok`/`equal`/`notEqual`/`deepEqual`/`throws` with strict semantics. **A test that reaches for more (`before`, `mock`, `assert.match`) fails only in the browser** until the stand-in grows it; `deepEqual` throws on a built-in it does not know rather than calling two of them equal.
 
 **Shared fixtures.** `test/data/` is a git submodule of [hbt-data](https://github.com/henrytill/hbt-data), consumed by all five implementations. Clone with `--recurse-submodules`, or run `git submodule update --init`. Changing a fixture is a cross-language decision: it will go red in the others until their fixes land.
 
@@ -116,10 +127,11 @@ There is no system-wide toolchain: node, npm and the harness's Python come from 
 nix develop          # then work normally; linkNodeModulesHook links node_modules
 npm run build        # tsc (typecheck only), then build.mjs
 npm test             # npm run build, then node --test
+npm run test:browser # npm run build, then the tests in headless Chromium
 npm run fmt          # prettier --write .
 ```
 
-The dev shell's `linkNodeModulesHook` links `node_modules` from the lockfile, so **a plain `npm install` inside it writes a real `node_modules` over the link**. Add a dependency with `--package-lock-only`, which updates `package.json` and `package-lock.json` and writes no tree:
+The dev shell's `linkNodeModulesHook` links `node_modules` from the lockfile, so **a plain `npm install` inside it writes a real `node_modules` over the link**. Add a dependency with `--package-lock-only`, which updates `package.json` and `package-lock.json` without installing anything:
 
 ```sh
 npm install --package-lock-only --save-dev <dep>   # or without --save-dev for a runtime dep
@@ -130,7 +142,7 @@ npm install --package-lock-only --save-dev <dep>   # or without --save-dev for a
 ### Nix
 
 ```sh
-nix flake check -L   # the conformance check
+nix flake check -L   # the conformance and browser checks
 nix build -L         # the hbt package
 ```
 
@@ -145,7 +157,7 @@ A `github:` flake reference carries no submodules, so it lacks the `hbt-data` in
 `.github/workflows/ci.yml` runs on pushes and PRs to `master`, with no path filter:
 
 - **Linux (npm) (24.x)** - `npm ci`, `npm run build`, `npm test`, on node 24 with an npm cache.
-- **Linux (Nix flake)** - `nix flake check -L` and `nix build -L`, through the `henrytill` cachix cache.
+- **Linux (Nix flake)** - `nix flake check -L` (conformance, and the unit tests in headless Chromium) and `nix build -L`, through the `henrytill` cachix cache.
 
 Both are required status checks. The npm job is the only one of the five that uses a `strategy.matrix`, which is why its check context carries the node version; **bumping that version renames the check**, so the branch protection contexts have to change in the same breath or `master` silently stops being gated.
 
