@@ -88,12 +88,7 @@ export function mkTime(value: number | Date): Time {
  * `mkEntity` is the only thing here that builds one, and it is what
  * holds the normal form: an update never repeats `createdAt`, since
  * it would carry no information `createdAt` does not. An update
- * strictly below `createdAt` is a different thing and stays. The
- * other implementations guarantee this at runtime rather than in the
- * type -- hbt-rs with a `debug_assert!(self.is_normal())` on
- * serialize, hbt-go with a `Normalize()` call at the parse and decode
- * boundaries -- and this should grow the same check at the serialize
- * and decode boundaries when they land.
+ * strictly below `createdAt` is a different thing and stays.
  */
 export type Entity = {
 	readonly url: Url;
@@ -124,6 +119,12 @@ export type EntityInit = Partial<Omit<Entity, 'url'>> & { readonly url: Url };
  * update strictly below `createdAt` is a different thing and stays.
  */
 export function mkEntity(init: EntityInit): Entity {
+	// The other implementations guarantee the normal form at runtime
+	// rather than in the type -- hbt-rs with a
+	// `debug_assert!(self.is_normal())` on serialize, hbt-go with a
+	// `Normalize()` call at the parse and decode boundaries -- and
+	// this should grow the same check at the serialize and decode
+	// boundaries when they land.
 	const updatedAt = new Set(init.updatedAt);
 	if (init.createdAt !== undefined) {
 		updatedAt.delete(init.createdAt);
