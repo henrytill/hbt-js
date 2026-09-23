@@ -15,7 +15,9 @@
 		"build": "node build.mjs",
 		"fmt": "prettier --write .",
 		"pretest": "npm run build",
-		"test": "node --test 'dist/test/node/**/*.test.js'"
+		"test": "node --test 'dist/test/node/**/*.test.js'",
+		"pretest:browser": "npm run build",
+		"test:browser": "node test/browser/run.mjs"
 	},
 	"repository": {
 		"type": "git",

@@ -2,7 +2,7 @@
 	// Visit https://aka.ms/tsconfig to read more about this file
 	"extends": "@tsconfig/node24/tsconfig.json",
 
-	"include": ["src"],
+	"include": ["src", "test/browser"],
 
 	"compilerOptions": {
 		// esbuild emits (see build.mjs); tsc only typechecks
