@@ -1,2 +1,2 @@
-export * from './entity.js';
-export * from './collection.js';
+export * as entity from './entity.js';
+export * as collection from './collection.js';
