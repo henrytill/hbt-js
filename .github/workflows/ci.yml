@@ -30,6 +30,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # GitHub's Ubuntu runners ship Google Chrome.
+      - run: npm run test:browser
+        env:
+          CHROMIUM: google-chrome
   linux-flake:
     name: Linux (Nix flake)
     runs-on: ubuntu-latest
