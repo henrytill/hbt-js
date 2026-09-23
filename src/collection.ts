@@ -18,10 +18,7 @@ export class Id {
 		this.#owner = owner;
 	}
 
-	/**
-	 * True when this handle was issued by the collection holding
-	 * `token`.
-	 */
+	/** Returns whether the collection holding `token` issued this. */
 	isOwnedBy(token: object): boolean {
 		return this.#owner === token;
 	}
@@ -130,8 +127,8 @@ export class Collection {
 	}
 
 	/**
-	 * A snapshot of the nodes. Copied, because updateLabels replaces
-	 * the array and a handed-out reference would go stale.
+	 * Returns a snapshot of the nodes. Copied, because `updateLabels`
+	 * replaces the array and a handed-out reference would go stale.
 	 */
 	entities(): readonly Entity[] {
 		return [...this.#nodes];
