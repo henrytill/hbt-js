@@ -73,8 +73,10 @@ describe('entityEquals', () => {
 		lastVisitedAt: mkTime(9),
 	});
 
-	// One differing value per field of Entity. Each case is typed to override the field it is keyed by -- a case that differs
-	// somewhere else does not compile -- so a field added to the entity needs a case here that really differs in it, and the
+	// One differing value per field of Entity. Each case is typed to
+	// override the field it is keyed by -- a case that differs
+	// somewhere else does not compile -- so a field added to the
+	// entity needs a case here that really differs in it, and the
 	// case then fails until entityEquals looks at that field.
 	const differing: { readonly [K in keyof EntityInit]-?: { readonly [P in K]-?: NonNullable<EntityInit[P]> } } = {
 		url: { url: mkUrl('https://other.example/') },

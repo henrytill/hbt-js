@@ -19,8 +19,10 @@ describe('Collection', () => {
 		const id = collection.insert(a);
 		assert.ok(collection.contains(a.url));
 		const found = collection.id(a.url);
-		// Compared by index and round-tripped, not with deepEqual: node's deep equality does not look at #private fields, so
-		// it holds between handles from different collections and would not notice id() returning a foreign one.
+		// Compared by index and round-tripped, not with deepEqual:
+		// node's deep equality does not look at #private fields, so
+		// it holds between handles from different collections and
+		// would not notice id() returning a foreign one.
 		assert.ok(found !== undefined);
 		assert.equal(found.index, id.index);
 		assert.equal(collection.entity(found), a);
@@ -59,9 +61,11 @@ describe('Collection', () => {
 	});
 
 	it('does not accept a bare object as an Id', () => {
+		// Id holds its owner privately, so an object of the right
+		// shape is not one.
 		const collection = new Collection();
 		collection.insert(a);
-		// @ts-expect-error Id holds its owner privately, so an object of the right shape is not one
+		// @ts-expect-error
 		assert.throws(() => collection.entity({ index: 0, owner: {} }));
 	});
 
