@@ -7,15 +7,19 @@ type Brand<T, B extends string> = T & { readonly [brand]: B };
  * address are the same key.
  */
 export type Url = Brand<string, 'Url'>;
+
 /** A title a source gave the bookmark, such as a link's text. */
 export type Name = Brand<string, 'Name'>;
+
 /** A tag. */
 export type Label = Brand<string, 'Label'>;
+
 /**
  * A longer description: Pinboard's `extended`, or the `<DD>` after an
  * HTML anchor.
  */
 export type Extended = Brand<string, 'Extended'>;
+
 /** Whole seconds since the Unix epoch: the form on the wire. */
 export type Time = Brand<number, 'Time'>;
 
@@ -54,8 +58,10 @@ function nonEmpty<B extends string>(s: string, what: string): Brand<string, B> {
 
 /** Wraps a name, refusing the empty string. */
 export const mkName = (s: string): Name => nonEmpty<'Name'>(s, 'name');
+
 /** Wraps a label, refusing the empty string. */
 export const mkLabel = (s: string): Label => nonEmpty<'Label'>(s, 'label');
+
 /** Wraps a description, refusing the empty string. */
 export const mkExtended = (s: string): Extended => nonEmpty<'Extended'>(s, 'extended');
 
