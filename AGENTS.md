@@ -158,7 +158,7 @@ A `github:` flake reference carries no submodules, so it lacks the `hbt-data` in
 
 `.github/workflows/ci.yml` runs on pushes and PRs to `master`, with no path filter:
 
-- **Linux (npm) (24.x)** - `npm ci`, `npm run build`, `npm test`, on node 24 with an npm cache.
+- **Linux (npm) (24.x)** - `npm ci`, `npm run build`, `npm test`, and `npm run test:browser` under the runner's Google Chrome, on node 24 with an npm cache.
 - **Linux (Nix flake)** - `nix flake check -L` (conformance, and the unit tests in headless Chromium) and `nix build -L`, through the `henrytill` cachix cache.
 
 Both are required status checks. The npm job is the only one of the five that uses a `strategy.matrix`, which is why its check context carries the node version; **bumping that version renames the check**, so the branch protection contexts have to change in the same breath or `master` silently stops being gated.
