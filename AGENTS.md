@@ -23,7 +23,7 @@ A TypeScript implementation of hbt, a bookmark and document collection tool, dev
 
 The tool reads bookmarks from Pinboard exports (JSON/XML), Netscape bookmark HTML, and Markdown, merges them into a collection keyed by URL, and writes the result as YAML or HTML.
 
-**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested. Nothing else is: there are no parsers, no formatters, and no CLI. `src/index.ts` is one line that prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
+**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested. Nothing else is: there are no parsers, no formatters, and no CLI. `src/cli.ts` is one line that prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
 
 The implementations share a wire format and a fixture corpus, so a semantic question - what merging two entities that share a timestamp should produce, say - gets settled once and pinned in [hbt-data](https://github.com/henrytill/hbt-data), then implemented in each. Issues are filed as companions across the repos; the discussion usually lives in whichever one hit it first. **hbt-rs's `AGENTS.md` carries the long form of the merge rules**, each with the issue that settled it; this file states what the code here does and does not restate the arguments.
 
@@ -32,6 +32,7 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 - **Typecheck early & often**: types are not only a correctness check, they guide the design. `tsconfig.json` turns on `strict`, plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `verbatimModuleSyntax`. Keep them on; `exactOptionalPropertyTypes` in particular is what makes "absent" and "present and `undefined`" different things, which the optional timestamps depend on.
 - **Branded types over bare primitives**: `Url`, `Name`, `Label`, `Extended` and `Time` are all `Brand<...>` aliases over `string` or `number`, so the checker catches field mix-ups the way hbt-rs's newtypes and hbt-go's named types do. Follow the pattern when adding a field. The brand is a `declare const brand: unique symbol`, so it exists only at the type level and costs nothing at runtime.
 - **Make illegal states unrepresentable**: where TypeScript cannot, constrain construction to one place. `mkEntity` is the only thing that builds an `Entity`; `mkName`, `mkLabel` and `mkExtended` are the only things that build their brands, and each refuses the empty string.
+- **The library runs in a browser too**: hbt-js starts as a CLI but is meant to run in a browser as well, so everything except `src/cli.ts` stays free of Node APIs (`fs`, `process`, `path`, `Buffer`). The library takes and returns strings; reading files, parsing arguments and choosing a format from an extension belong to the CLI. A parser that needs a platform facility, such as a `DOMParser` for HTML and XML, takes it as an argument, so the browser passes its own and the CLI supplies one.
 - **No recursion**: avoid recursive calls over user-provided data, which can nest arbitrarily deeply. The parsers in the other four all walk an explicit stack; the ones here should too when they land.
 
 ## Layout
@@ -42,7 +43,8 @@ A single npm package, ESM (`"type": "module"`), compiled by `tsc` from `src/` to
 | ------------------- | --------------------------------------------------------------------------------------------------- |
 | `src/entity.ts`     | The branded types, `Entity`, `mkEntity`, `entityEquals`, `entityMerge`, `ParseError`                |
 | `src/collection.ts` | `Id` and `Collection` - the graph, the URL index, `upsert`, `updateLabels`                          |
-| `src/index.ts`      | The CLI entry point. Currently a stub                                                               |
+| `src/index.ts`      | The library's entry point: re-exports the modules above                                             |
+| `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                   |
 | `src/*.test.ts`     | Unit tests, beside the code they cover                                                              |
 | `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
 
@@ -128,7 +130,7 @@ nix flake check -L   # the conformance check
 nix build -L         # the hbt package
 ```
 
-`self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/index.js`. **`dist/index.js` has no shebang**, so outside Nix it is not directly executable - anything that wants to spawn the CLI without Nix needs `node dist/index.js`, or the file needs a `#!/usr/bin/env node` line.
+`self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/cli.js`. **`dist/cli.js` has no shebang**, so outside Nix it is not directly executable - anything that wants to spawn the CLI without Nix needs `node dist/cli.js`, or the file needs a `#!/usr/bin/env node` line.
 
 **The CLI will need `--version` to report the revision.** The other four bake the commit into the binary and print it (`hbt 0.1.0 (7e16a14)` from hbt-rs, `hbt 0.1.0-21ebc53` from hbt-go); hbt-analysis's benchmark harness reads that to record which build produced a measurement, and a binary that answers `hbt` to every flag records nothing. hbt-rs does it with `HBT_COMMIT_HASH` from `self.shortRev or self.dirtyShortRev` in its flake - note that reading those is also what forces hbt-analysis to use `git+file:` inputs rather than `path:`, so adding it here has that consequence upstream.
 
