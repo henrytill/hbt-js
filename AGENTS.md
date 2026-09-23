@@ -97,6 +97,8 @@ CHROMIUM=/path/to/chrome npm run test:browser         # any other Chromium or Ch
 
 This is the run that shows the library behaves the same in both places, which matters most once a parser takes an injected `DOMParser`: node's tests get the CLI's, the browser's get the native one. The stand-ins implement only what the tests use - `describe`, `it`, and `ok`/`equal`/`notEqual`/`deepEqual`/`throws` with strict semantics. **A test that reaches for more (`before`, `mock`, `assert.match`) fails only in the browser** until the stand-in grows it; `deepEqual` throws on a built-in it does not know rather than calling two of them equal.
 
+**Source maps.** esbuild writes one beside every bundle, but node reads them only under `--enable-source-maps`. `npm test` passes it, so a failure's stack names the line in `src/*.test.ts` rather than in the bundle. The browser report prints only each error's message, and `bin/hbt` does not pass the flag.
+
 **Shared fixtures.** `test/data/` is a git submodule of [hbt-data](https://github.com/henrytill/hbt-data), consumed by all five implementations. Clone with `--recurse-submodules`, or run `git submodule update --init`. Changing a fixture is a cross-language decision: it will go red in the others until their fixes land.
 
 **Never edit `test/data/` in place.** It is detached at a revision five repositories pin. Fixture and harness work belongs in an hbt-data checkout of its own, lands there first, and reaches this repo as a pointer bump. A missing or stale submodule shows up as mass failures rather than as a clear error.
