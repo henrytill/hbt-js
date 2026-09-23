@@ -8,7 +8,9 @@
 	},
 	"files": [
 		"dist",
-		"!dist/test"
+		"!dist/test",
+		"!dist/types/test",
+		"!dist/types/**/*.test.d.ts"
 	],
 	"scripts": {
 		"prebuild": "tsc",

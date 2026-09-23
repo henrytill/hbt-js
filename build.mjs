@@ -1,4 +1,5 @@
-// Builds every output with esbuild; tsc only typechecks (`noEmit`).
+// Builds the JavaScript with esbuild; tsc typechecks and writes the
+// declarations (dist/types), as the prebuild script.
 // The library is also bundled for the browser, so a dependency that
 // reaches for a Node builtin fails the build the day it is added
 // rather than the day a browser front end is.

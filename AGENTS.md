@@ -37,7 +37,7 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 ## Layout
 
-A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` to `dist/`. `tsc` only typechecks (`noEmit`), as the `prebuild` script; `build.mjs` then writes every output:
+A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` to `dist/`. `tsc` typechecks and writes only the declarations (`emitDeclarationOnly`, to `dist/types/`), as the `prebuild` script; `build.mjs` then writes the JavaScript:
 
 | File                | Role                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
@@ -51,10 +51,11 @@ A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` t
 
 - `dist/cli.js` - the CLI, for node.
 - `dist/browser/hbt.js` - the library, for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose dependencies that bundle for both platforms.**
+- `dist/types/src/` - the declarations, from `tsc`. esbuild writes none. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository.
 - `dist/test/node/` - one bundle per test file.
 - `dist/test/browser/` - every test file in one classic script, beside the page that loads it.
 
-Every bundle carries its dependencies, and esbuild resolves each package's `browser`/`node` export condition by platform, so the node and browser outputs may contain different builds of the same dependency. `package.json` excludes `dist/test` from `files`, so the tests are built but not published.
+Every bundle carries its dependencies, and esbuild resolves each package's `browser`/`node` export condition by platform, so the node and browser outputs may contain different builds of the same dependency. `package.json` excludes `dist/test` and the tests' declarations from `files`, so the tests are built but not published.
 
 ### `entity.ts`
 

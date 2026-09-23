@@ -5,8 +5,13 @@
 	"include": ["src", "test/browser"],
 
 	"compilerOptions": {
-		// esbuild emits (see build.mjs); tsc only typechecks
-		"noEmit": true,
+		// esbuild writes the JavaScript (see build.mjs); tsc
+		// typechecks and writes only the declarations. The root is
+		// "." because test/browser is typechecked too.
+		"rootDir": ".",
+		"outDir": "./dist/types",
+		"declaration": true,
+		"emitDeclarationOnly": true,
 
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module
