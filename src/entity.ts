@@ -2,7 +2,10 @@ declare const brand: unique symbol;
 
 type Brand<T, B extends string> = T & { readonly [brand]: B };
 
-/** A URL in its WHATWG-normalized form, so two spellings of one address are the same key. */
+/**
+ * A URL in its WHATWG-normalized form, so two spellings of one
+ * address are the same key.
+ */
 export type Url = Brand<string, 'Url'>;
 export type Name = Brand<string, 'Name'>;
 export type Label = Brand<string, 'Label'>;
@@ -25,9 +28,11 @@ export function mkUrl(s: string): Url {
 /**
  * Refuses the empty string.
  *
- * An empty name, label or description is a value the formatters write and the readers drop, so a collection carrying one does
- * not round-trip. Enforcing it here rather than at each parse site means no producer can make one -- see hbt-ocaml's
- * `Entity.Empty`, which refuses it on the same ground.
+ * An empty name, label or description is a value the formatters write
+ * and the readers drop, so a collection carrying one does not
+ * round-trip. Enforcing it here rather than at each parse site means
+ * no producer can make one -- see hbt-ocaml's `Entity.Empty`, which
+ * refuses it on the same ground.
  */
 function nonEmpty<B extends string>(s: string, what: string): Brand<string, B> {
 	if (s === '') {
@@ -41,22 +46,30 @@ export const mkLabel = (s: string): Label => nonEmpty<'Label'>(s, 'label');
 export const mkExtended = (s: string): Extended => nonEmpty<'Extended'>(s, 'extended');
 
 /**
- * The widest instant this can hold, in whole seconds: the ECMAScript limit on a Date, +/-8.64e15 ms.
+ * The widest instant this can hold, in whole seconds: the ECMAScript
+ * limit on a Date, +/-8.64e15 ms.
  *
- * Number.isSafeInteger alone admits about 285 million years, where hbt-rs rejects anything chrono's DateTime cannot hold
- * (`parse_timestamp` fails on a timestamp `DateTime::from_timestamp` refuses), so a nonsense ADD_DATE that errors there would
- * have been accepted here and then differed in the output instead. The two bounds are close but not identical -- chrono stops
- * a little sooner -- so a value between them is still a divergence, and no fixture pins one.
+ * Number.isSafeInteger alone admits about 285 million years, where
+ * hbt-rs rejects anything chrono's DateTime cannot hold
+ * (`parse_timestamp` fails on a timestamp `DateTime::from_timestamp`
+ * refuses), so a nonsense ADD_DATE that errors there would have been
+ * accepted here and then differed in the output instead. The two
+ * bounds are close but not identical -- chrono stops a little sooner
+ * -- so a value between them is still a divergence, and no fixture
+ * pins one.
  */
 const MAX_TIME = 8_640_000_000_000;
 
 /**
- * Wraps a Unix timestamp, floored to whole seconds so the value in memory is the one on the wire.
+ * Wraps a Unix timestamp, floored to whole seconds so the value in
+ * memory is the one on the wire.
  *
- * Floored, not truncated: a pre-epoch fraction has to go to the second below, which is what serializing it gives back.
- * hbt-rs pins this (`parse_flexible_truncates_pre_epoch_sub_second_precision` asserts `1969-12-31T23:59:59.500Z` is `-1`),
- * and a Pinboard `time` is RFC 3339 and may carry a fraction, so truncating toward zero would disagree by a second on every
- * pre-epoch post.
+ * Floored, not truncated: a pre-epoch fraction has to go to the
+ * second below, which is what serializing it gives back. hbt-rs pins
+ * this (`parse_flexible_truncates_pre_epoch_sub_second_precision`
+ * asserts `1969-12-31T23:59:59.500Z` is `-1`), and a Pinboard `time`
+ * is RFC 3339 and may carry a fraction, so truncating toward zero
+ * would disagree by a second on every pre-epoch post.
  */
 export function mkTime(seconds: number): Time;
 export function mkTime(date: Date): Time;
@@ -72,15 +85,22 @@ export function mkTime(value: number | Date): Time {
 /**
  * A bookmark, in normal form.
  *
- * `mkEntity` is the only thing here that builds one, and it is what holds the normal form: an update never repeats
- * `createdAt`, since it would carry no information `createdAt` does not. An update strictly below `createdAt` is a different
- * thing and stays. The other implementations guarantee this at runtime rather than in the type -- hbt-rs with a
- * `debug_assert!(self.is_normal())` on serialize, hbt-go with a `Normalize()` call at the parse and decode boundaries -- and
- * this should grow the same check at the serialize and decode boundaries when they land.
+ * `mkEntity` is the only thing here that builds one, and it is what
+ * holds the normal form: an update never repeats `createdAt`, since
+ * it would carry no information `createdAt` does not. An update
+ * strictly below `createdAt` is a different thing and stays. The
+ * other implementations guarantee this at runtime rather than in the
+ * type -- hbt-rs with a `debug_assert!(self.is_normal())` on
+ * serialize, hbt-go with a `Normalize()` call at the parse and decode
+ * boundaries -- and this should grow the same check at the serialize
+ * and decode boundaries when they land.
  */
 export type Entity = {
 	readonly url: Url;
-	/** Absent for an undated mention: an absent time is the identity of a merge, not a very old instant. */
+	/**
+	 * Absent for an undated mention: an absent time is the identity
+	 * of a merge, not a very old instant.
+	 */
 	readonly createdAt?: Time;
 	/** Updates, never including `createdAt`. */
 	readonly updatedAt: ReadonlySet<Time>;
@@ -98,9 +118,10 @@ export type EntityInit = Partial<Omit<Entity, 'url'>> & { readonly url: Url };
 /**
  * Builds an entity in normal form.
  *
- * Every construction goes through here, so the one rule of the normal form -- an update never repeats `createdAt`, since it
- * would carry no information `createdAt` does not -- holds by construction. An update strictly below `createdAt` is a different
- * thing and stays.
+ * Every construction goes through here, so the one rule of the normal
+ * form -- an update never repeats `createdAt`, since it would carry
+ * no information `createdAt` does not -- holds by construction. An
+ * update strictly below `createdAt` is a different thing and stays.
  */
 export function mkEntity(init: EntityInit): Entity {
 	const updatedAt = new Set(init.updatedAt);
@@ -133,7 +154,9 @@ export function entityEquals(a: Entity, b: Entity): boolean {
 	);
 }
 
-/** Combines two optional values; an absent one contributes nothing. */
+/**
+ * Combines two optional values; an absent one contributes nothing.
+ */
 function combine<T>(a: T | undefined, b: T | undefined, f: (a: T, b: T) => T): T | undefined {
 	if (a === undefined) return b;
 	if (b === undefined) return a;
@@ -143,9 +166,11 @@ function combine<T>(a: T | undefined, b: T | undefined, f: (a: T, b: T) => T): T
 /**
  * Absorbs `other` into `entity`, returning the result.
  *
- * Merging is field-wise. The earlier creation time wins; both creation times go into the update history and `mkEntity` takes the
- * winner back out, which is what keeps merging associative. Merging an entity that already equals `entity` is a no-op.
- * Flags combine with `||`; `lastVisitedAt` keeps the most recent time.
+ * Merging is field-wise. The earlier creation time wins; both
+ * creation times go into the update history and `mkEntity` takes the
+ * winner back out, which is what keeps merging associative. Merging
+ * an entity that already equals `entity` is a no-op. Flags combine
+ * with `||`; `lastVisitedAt` keeps the most recent time.
  */
 export function entityMerge(entity: Entity, other: Entity): Entity {
 	if (entityEquals(entity, other)) {
