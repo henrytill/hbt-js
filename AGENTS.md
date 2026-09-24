@@ -49,12 +49,12 @@ A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twi
 | `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it     |
 | `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
 
-- `dist/lib/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests here; `files` leaves them out.
-- `dist/lib/src/cli.js` - the CLI, from `tsc` too, and what `bin` names; `exports` does not, so consumers cannot import it. Unbundled, it runs the same modules consumers get, so conformance tests the shipped library. The cost is that **a dependency only the CLI uses is still a `dependency`**, installed by every consumer: prefer a light one, or load a heavy one with a dynamic `import()`.
+- `dist/tsc/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests here; `files` leaves them out.
+- `dist/tsc/src/cli.js` - the CLI, from `tsc` too, and what `bin` names; `exports` does not, so consumers cannot import it. Unbundled, it runs the same modules consumers get, so conformance tests the shipped library. The cost is that **a dependency only the CLI uses is still a `dependency`**, installed by every consumer: prefer a light one, or load a heavy one with a dynamic `import()`.
 - `dist/browser/hbt.js` - the library, bundled by esbuild for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose library dependencies that bundle for both platforms.**
 - `dist/test/browser/` - every test file in one esbuild script, beside the page that loads it. Not published.
 
-esbuild resolves each dependency's `browser` export condition for the bundles, while node resolves the `node` one for `dist/lib/`, so the browser and node may run different builds of the same dependency.
+`dist/tsc/` is named for how it is built, not where it runs: a browser app that installs `hbt` and bundles it gets `dist/tsc/src/index.js` too, not `dist/browser/`, which is for loading directly with `<script type="module">`. Its third-party imports resolve by whoever loads it - node takes each dependency's `node` export condition, a browser bundler the `browser` one - so the browser and node may run different builds of the same dependency.
 
 ### `entity.ts`
 
@@ -82,8 +82,8 @@ Two layers today: unit tests beside the code, run under node and again in a brow
 **Unit tests.** `node --test` over the tests as `tsc` compiles them, beside the library they cover, so `npm test` builds first (its `pretest` script):
 
 ```sh
-npm test                                     # build, then every dist/lib/src/**/*.test.js
-node --test dist/lib/src/entity.test.js      # one file, after a build
+npm test                                     # build, then every dist/tsc/src/**/*.test.js
+node --test dist/tsc/src/entity.test.js      # one file, after a build
 ```
 
 They are the only thing actually covering this repo right now. Write them against the exported API rather than internals - `Id`'s owner is private precisely so that nothing, tests included, can reach around it.
@@ -148,7 +148,7 @@ nix flake check -L   # the conformance and browser checks
 nix build -L         # the hbt package
 ```
 
-`self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/lib/src/cli.js`. `src/cli.ts` starts with `#!/usr/bin/env node`, which `tsc` keeps, so the `hbt` that a plain `npm install` links runs too.
+`self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/tsc/src/cli.js`. `src/cli.ts` starts with `#!/usr/bin/env node`, which `tsc` keeps, so the `hbt` that a plain `npm install` links runs too.
 
 **The CLI will need `--version` to report the revision.** The other four bake the commit into the binary and print it (`hbt 0.1.0 (7e16a14)` from hbt-rs, `hbt 0.1.0-21ebc53` from hbt-go); hbt-analysis's benchmark harness reads that to record which build produced a measurement, and a binary that answers `hbt` to every flag records nothing. hbt-rs does it with `HBT_COMMIT_HASH` from `self.shortRev or self.dirtyShortRev` in its flake - note that reading those is also what forces hbt-analysis to use `git+file:` inputs rather than `path:`, so adding it here has that consequence upstream.
 

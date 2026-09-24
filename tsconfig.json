@@ -8,9 +8,9 @@
 		// tsc writes the library, unbundled, for npm consumers; esbuild
 		// writes the bundled CLI and browser outputs (see build.mjs).
 		// The root is "." because test/browser is typechecked too, so
-		// the library lands in dist/lib/src.
+		// the library lands in dist/tsc/src.
 		"rootDir": ".",
-		"outDir": "./dist/lib",
+		"outDir": "./dist/tsc",
 		"declaration": true,
 		"sourceMap": true,
 
