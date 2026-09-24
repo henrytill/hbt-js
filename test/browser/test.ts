@@ -97,18 +97,5 @@ function write(outcome: Omit<Report, 'userAgent'>): void {
 	// run.mjs needs no decoding; escaping every `<` keeps a `</script>`
 	// in a test name or message from closing the element early.
 	const json = document.getElementById('report');
-	if (json !== null) json.textContent = toJson(report).replaceAll('<', '\\u003c');
-}
-
-// JSON.stringify(report, null, '\t'), except that each test stays on
-// one line, so the report reads like the page's in DevTools' Elements
-// tab. It walks the report's own fields, so one added to Report
-// cannot be left out, and an absent optional one is simply not there.
-function toJson(report: Report): string {
-	const tests = `[\n${report.tests.map((t) => `\t\t${JSON.stringify(t)}`).join(',\n')}\n\t]`;
-	const fields = Object.entries(report).map(([k, v]) => {
-		const value = k === 'tests' && report.tests.length > 0 ? tests : JSON.stringify(v);
-		return `\t${JSON.stringify(k)}: ${value}`;
-	});
-	return `{\n${fields.join(',\n')}\n}`;
+	if (json !== null) json.textContent = JSON.stringify(report, null, '\t').replaceAll('<', '\\u003c');
 }
