@@ -37,21 +37,27 @@
       in
       {
         packages.default = hbt;
-        checks.conformance = hbt-data.lib.${system}.check {
-          binary = "${hbt}/bin/hbt";
-          waivers = ./conformance.waivers;
+        checks = {
+          conformance = hbt-data.lib.${system}.check {
+            binary = "${hbt}/bin/hbt";
+            waivers = ./conformance.waivers;
+          };
+        }
+        # nixpkgs' chromium is Linux-only, and an unsupported package
+        # fails evaluation of every check, so darwin skips this one.
+        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          # The unit tests again, in headless Chromium, by the script
+          # `npm run test:browser` runs, against the tests this build
+          # bundled for the browser.
+          browser = hbt.overrideAttrs (old: {
+            pname = "hbt-browser-check";
+            nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.chromium ];
+            installPhase = ''
+              node test/browser/run.mjs
+              touch $out
+            '';
+          });
         };
-        # The unit tests again, in headless Chromium, by the script
-        # `npm run test:browser` runs, against the tests this build
-        # bundled for the browser.
-        checks.browser = hbt.overrideAttrs (old: {
-          pname = "hbt-browser-check";
-          nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.chromium ];
-          installPhase = ''
-            node test/browser/run.mjs
-            touch $out
-          '';
-        });
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             hbt-data.packages.${system}.python

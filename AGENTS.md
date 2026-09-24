@@ -144,7 +144,7 @@ npm install --package-lock-only --save-dev <dep>   # or without --save-dev for a
 ### Nix
 
 ```sh
-nix flake check -L   # the conformance and browser checks
+nix flake check -L   # the conformance and browser checks (browser on Linux only)
 nix build -L         # the hbt package
 ```
 
