@@ -4,26 +4,26 @@
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
 	"bin": {
-		"hbt": "dist/lib/src/cli.js"
+		"hbt": "dist/tsc/src/cli.js"
 	},
 	"exports": {
 		".": {
-			"types": "./dist/lib/src/index.d.ts",
-			"default": "./dist/lib/src/index.js"
+			"types": "./dist/tsc/src/index.d.ts",
+			"default": "./dist/tsc/src/index.js"
 		}
 	},
 	"files": [
 		"dist",
 		"!dist/test",
-		"!dist/lib/test",
-		"!dist/lib/src/**/*.test.*"
+		"!dist/tsc/test",
+		"!dist/tsc/src/**/*.test.*"
 	],
 	"scripts": {
 		"prebuild": "tsc",
 		"build": "node build.mjs",
 		"fmt": "prettier --write .",
 		"pretest": "npm run build",
-		"test": "node --enable-source-maps --test 'dist/lib/src/**/*.test.js'",
+		"test": "node --enable-source-maps --test 'dist/tsc/src/**/*.test.js'",
 		"pretest:browser": "npm run build",
 		"test:browser": "node test/browser/run.mjs"
 	},
