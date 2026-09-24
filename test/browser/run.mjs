@@ -47,7 +47,7 @@ if (result.error !== undefined) {
 // <script id="report">, whose text the page serializes verbatim, so
 // all that is left to parse is the JSON. Still empty means the bundle
 // never got as far as writing it, which fails too.
-const json = /<script type="application\/json" id="report">([\s\S]*?)<\/script>/.exec(result.stdout)?.[1];
+const json = /<script\b[^>]*\bid="report"[^>]*>([\s\S]*?)<\/script>/.exec(result.stdout)?.[1];
 if (json === undefined || json === '') {
 	console.error(`no report in the page ${browser} returned`);
 	process.exit(1);
