@@ -13,10 +13,7 @@
 		}
 	},
 	"files": [
-		"dist",
-		"!dist/browser",
-		"!dist/test",
-		"!dist/tsc/test",
+		"dist/tsc/src",
 		"!dist/tsc/src/**/*.test.*"
 	],
 	"scripts": {
