@@ -29,7 +29,7 @@
 		"textWrap": "maintain"
 	},
 	// test/data is hbt-data's to format.
-	"excludes": ["test/data", "dist"],
+	"excludes": ["test/data"],
 	// From node_modules rather than a URL, so the lockfile pins them
 	// and formatting needs no network.
 	"plugins": [
