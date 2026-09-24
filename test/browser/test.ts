@@ -43,7 +43,7 @@ export async function run(load: () => void): Promise<void> {
 	try {
 		load();
 	} catch (e) {
-		write({ userAgent: navigator.userAgent, tests: [], loadError: String(e) });
+		write({ tests: [], loadError: String(e) });
 		return;
 	}
 	const results: Result[] = [];
@@ -55,7 +55,7 @@ export async function run(load: () => void): Promise<void> {
 			results.push({ suites, name, ok: false, error: String(e) });
 		}
 	}
-	write({ userAgent: navigator.userAgent, tests: results });
+	write({ tests: results });
 }
 
 export type Line = { readonly className: string; readonly text: string };
@@ -87,7 +87,8 @@ function span({ className, text }: Line): Element {
 	return span;
 }
 
-function write(report: Report): void {
+function write(outcome: Omit<Report, 'userAgent'>): void {
+	const report = { userAgent: navigator.userAgent, ...outcome };
 	const { lines, summary } = format(report);
 	document.title = `${summary.text} - hbt unit tests`;
 	document.getElementById('result')?.replaceChildren(...[...lines, summary].map(span));
