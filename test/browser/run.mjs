@@ -21,7 +21,15 @@ try {
 		browser,
 		// --no-sandbox because Chromium's sandbox needs user namespaces,
 		// which the Nix build sandbox does not offer; the page is our own.
-		['--headless', '--no-sandbox', '--disable-gpu', `--user-data-dir=${profile}`, '--virtual-time-budget=10000', '--dump-dom', page],
+		[
+			'--headless',
+			'--no-sandbox',
+			'--disable-gpu',
+			`--user-data-dir=${profile}`,
+			'--virtual-time-budget=10000',
+			'--dump-dom',
+			page,
+		],
 		// Chromium logs dbus and GPU complaints on stderr whatever
 		// happens; the outcome is in the page on stdout.
 		{ encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 },
