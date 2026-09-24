@@ -9,9 +9,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
 
-// The same formatting the page uses, from tsc's build of the stand-in,
-// which `npm run build` has written by the time this runs.
-import * as test from '../../dist/tsc/test/browser/test.js';
+// The same formatting the page uses, straight from the stand-in's
+// source: node strips its types, so this needs neither a build nor
+// knowledge of where tsc puts its output.
+import * as test from './test.ts';
 
 const browser = process.env['CHROMIUM'] ?? 'chromium';
 const page = url.pathToFileURL(path.resolve('dist/test/browser/index.html')).href;
