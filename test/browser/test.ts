@@ -68,7 +68,7 @@ export function format(report: Report): { readonly lines: readonly Line[]; reado
 	const lines: Line[] = [];
 	for (const { suites, name, ok, error } of report.tests) {
 		lines.push({ className: ok ? 'pass' : 'fail', text: `${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}` });
-		if (error !== undefined) lines.push({ className: 'error', text: `  ${error}` });
+		if (error !== undefined) lines.push({ className: 'error', text: error.replaceAll(/^/gm, '  ') });
 	}
 	const failed = report.tests.filter((t) => !t.ok).length;
 	const passed = report.loadError === undefined && failed === 0;
