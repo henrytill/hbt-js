@@ -4,7 +4,7 @@
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
 	"bin": {
-		"hbt": "dist/cli.js"
+		"hbt": "dist/lib/src/cli.js"
 	},
 	"exports": {
 		".": {
@@ -16,7 +16,6 @@
 		"dist",
 		"!dist/test",
 		"!dist/lib/test",
-		"!dist/lib/src/cli.*",
 		"!dist/lib/src/**/*.test.*"
 	],
 	"scripts": {

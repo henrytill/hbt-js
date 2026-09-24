@@ -1,6 +1,6 @@
-// Builds the bundled outputs with esbuild: the CLI, the library for
-// the browser, and the unit tests for the browser. The unbundled
-// library that npm consumers import is tsc's, as the prebuild script.
+// Builds the browser outputs with esbuild: the library and the unit
+// tests. Everything that runs under node - the library npm consumers
+// import, and the CLI - is tsc's, as the prebuild script.
 // Bundling the library for the browser also means a dependency that
 // reaches for a Node builtin fails the build the day it is added
 // rather than the day a browser front end is.
@@ -13,7 +13,6 @@ const tests = fs.globSync('src/**/*.test.ts');
 const browserEntry = [...tests.map((t) => `import './${t}';`), `import * as test from './test/browser/test.ts';`, 'test.run();'];
 
 await Promise.all([
-	esbuild.build({ ...common, entryPoints: ['src/cli.ts'], platform: 'node', format: 'esm', outfile: 'dist/cli.js' }),
 	esbuild.build({ ...common, entryPoints: ['src/index.ts'], platform: 'browser', format: 'esm', outfile: 'dist/browser/hbt.js' }),
 
 	// The unit tests in one classic script, since Chrome refuses
