@@ -61,6 +61,40 @@ function entityRepr(entity: Entity): Record<string, unknown> {
  */
 const withoutMerge = (tags: yaml.Tags): yaml.Tags => tags.filter((tag) => typeof tag === 'string' || tag.tag !== 'tag:yaml.org,2002:merge');
 
+/**
+ * Matches a character PyYAML will not take as it stands in a
+ * double-quoted scalar: anything outside its printable set (C0 but
+ * tab and the line breaks, DEL, C1, U+FFFE and U+FFFF, a lone
+ * surrogate), and the breaks themselves, which it folds -- LF and CR,
+ * and the U+0085, U+2028 and U+2029 that YAML 1.1 counts as breaks
+ * too. The `yaml` package escapes C0 but writes the rest raw, even
+ * inside quotes, and PyYAML then refuses the document or folds the
+ * break into a space. Tab is here because a plain scalar may not hold
+ * one either.
+ */
+const UNPRINTABLE = /[^\x20-\x7e\xa0-\u2027\u202a-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/u;
+
+/** The escapes PyYAML reads in a double-quoted scalar, where JSON's would differ. */
+const ESCAPES: Readonly<Record<string, string>> = { '"': '\\"', '\\': '\\\\', '\t': '\\t', '\n': '\\n', '\r': '\\r' };
+
+const escape = (c: string): string => {
+	const code = c.charCodeAt(0);
+	return ESCAPES[c] ?? (code <= 0xff ? `\\x${code.toString(16).padStart(2, '0')}` : `\\u${code.toString(16).padStart(4, '0')}`);
+};
+
+/**
+ * A string tag ahead of the package's own, for the strings it would
+ * write in a form PyYAML misreads: each of those is double-quoted
+ * here, with every character `UNPRINTABLE` matches escaped.
+ */
+const unprintableString: yaml.ScalarTag = {
+	tag: 'tag:yaml.org,2002:str',
+	default: true,
+	identify: (value) => typeof value === 'string' && UNPRINTABLE.test(value),
+	resolve: (s) => s,
+	stringify: ({ value }) => `"${String(value).replace(new RegExp(`${UNPRINTABLE.source}|["\\\\]`, 'gu'), escape)}"`,
+};
+
 const pyyamlKey = (tag: string, test: RegExp): yaml.ScalarTag => ({ tag, default: true, test, resolve: (s) => s });
 
 /**
@@ -92,7 +126,7 @@ export function formatYaml(collection: Collection): string {
 	}));
 	return yaml.stringify({ version: VERSION, length: collection.length, value }, {
 		version: '1.1',
-		customTags: withoutMerge,
+		customTags: (tags) => [unprintableString, ...withoutMerge(tags)],
 		compat: PYYAML_KEYS,
 		lineWidth: 0,
 		indentSeq: false,
