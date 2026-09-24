@@ -23,7 +23,7 @@ A TypeScript implementation of hbt, a bookmark and document collection tool, dev
 
 The tool reads bookmarks from Pinboard exports (JSON/XML), Netscape bookmark HTML, and Markdown, merges them into a collection keyed by URL, and writes the result as YAML or HTML.
 
-**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested. Nothing else is: there are no parsers, no formatters, and no CLI. `src/cli.ts` is one line that prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
+**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested. Nothing else is: there are no parsers, no formatters, and no CLI. `src/cli.ts` prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
 
 The implementations share a wire format and a fixture corpus, so a semantic question - what merging two entities that share a timestamp should produce, say - gets settled once and pinned in [hbt-data](https://github.com/henrytill/hbt-data), then implemented in each. Issues are filed as companions across the repos; the discussion usually lives in whichever one hit it first. **hbt-rs's `AGENTS.md` carries the long form of the merge rules**, each with the issue that settled it; this file states what the code here does and does not restate the arguments.
 
@@ -37,7 +37,7 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 ## Layout
 
-A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twice over: `tsc` writes the library unbundled, for npm consumers, as the `prebuild` script, and `build.mjs` then uses esbuild to write the bundled outputs.
+A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twice over: `tsc` writes everything that runs under node - the library and the CLI - unbundled, as the `prebuild` script, and `build.mjs` then uses esbuild to write the browser bundles.
 
 | File                | Role                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
@@ -49,12 +49,12 @@ A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twi
 | `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it     |
 | `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
 
-- `dist/lib/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests and `cli.js` here; `files` leaves them out.
-- `dist/cli.js` - the CLI, bundled by esbuild for node. It carries its dependencies, so one only the CLI uses can stay a `devDependency`.
+- `dist/lib/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests here; `files` leaves them out.
+- `dist/lib/src/cli.js` - the CLI, from `tsc` too, and what `bin` names; `exports` does not, so consumers cannot import it. Unbundled, it runs the same modules consumers get, so conformance tests the shipped library. The cost is that **a dependency only the CLI uses is still a `dependency`**, installed by every consumer: prefer a light one, or load a heavy one with a dynamic `import()`.
 - `dist/browser/hbt.js` - the library, bundled by esbuild for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose library dependencies that bundle for both platforms.**
 - `dist/test/browser/` - every test file in one esbuild script, beside the page that loads it. Not published.
 
-esbuild resolves each package's `browser`/`node` export condition by platform, so the two bundles may contain different builds of the same dependency.
+esbuild resolves each dependency's `browser` export condition for the bundles, while node resolves the `node` one for `dist/lib/`, so the browser and node may run different builds of the same dependency.
 
 ### `entity.ts`
 
@@ -148,7 +148,7 @@ nix flake check -L   # the conformance and browser checks
 nix build -L         # the hbt package
 ```
 
-`self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/cli.js`. **`dist/cli.js` has no shebang**, so outside Nix it is not directly executable - anything that wants to spawn the CLI without Nix needs `node dist/cli.js`, or the file needs a `#!/usr/bin/env node` line.
+`self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/lib/src/cli.js`. `src/cli.ts` starts with `#!/usr/bin/env node`, which `tsc` keeps, so the `hbt` that a plain `npm install` links runs too.
 
 **The CLI will need `--version` to report the revision.** The other four bake the commit into the binary and print it (`hbt 0.1.0 (7e16a14)` from hbt-rs, `hbt 0.1.0-21ebc53` from hbt-go); hbt-analysis's benchmark harness reads that to record which build produced a measurement, and a binary that answers `hbt` to every flag records nothing. hbt-rs does it with `HBT_COMMIT_HASH` from `self.shortRev or self.dirtyShortRev` in its flake - note that reading those is also what forces hbt-analysis to use `git+file:` inputs rather than `path:`, so adding it here has that consequence upstream.
 
