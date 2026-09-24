@@ -48,18 +48,25 @@ function entityRepr(entity: Entity): Record<string, unknown> {
 }
 
 /**
- * PyYAML resolves these two plain scalars to the merge and value keys
- * wherever they appear, and its safe loader then refuses them, so a
- * name or label spelled exactly so has to be quoted.
- */
-const PYYAML_KEYS: ReadonlySet<unknown> = new Set(['<<', '=']);
-
-/**
  * The `yaml` package's 1.1 schema, less its merge key tag, which
- * claims the string `<<` and writes it plain whatever the node's
- * type says. The `merge: false` option does not remove it.
+ * claims the string `<<` and writes it plain whatever else the
+ * options say. The `merge: false` option does not remove it.
  */
 const withoutMerge = (tags: yaml.Tags): yaml.Tags => tags.filter((tag) => typeof tag === 'string' || tag.tag !== 'tag:yaml.org,2002:merge');
+
+const pyyamlKey = (tag: string, test: RegExp): yaml.ScalarTag => ({ tag, default: true, test, resolve: (s) => s });
+
+/**
+ * The two implicit keys of PyYAML's resolver that the package's 1.1
+ * schema does not know: the merge key `<<` and the value key `=`.
+ * PyYAML resolves either one wherever it appears plain, and its safe
+ * loader then refuses it, so a name or label spelled exactly so has to
+ * be quoted -- which `compat` does for any string one of these tags
+ * would claim. Every other resolver of PyYAML's agrees with the 1.1
+ * schema: a fuzz of strings built from its grammar found no other
+ * plain scalar it reads as anything but a string.
+ */
+const PYYAML_KEYS = [pyyamlKey('tag:yaml.org,2002:merge', /^<<$/), pyyamlKey('tag:yaml.org,2002:value', /^=$/)];
 
 /**
  * Writes `collection` as YAML, in the shape `collection.schema.json`
@@ -76,11 +83,11 @@ export function formatYaml(collection: Collection): string {
 		entity: entityRepr(collection.entity(id)),
 		edges: collection.edges(id).map((to) => to.index),
 	}));
-	const doc = new yaml.Document({ version: VERSION, length: collection.length, value }, { version: '1.1', customTags: withoutMerge });
-	yaml.visit(doc, {
-		Scalar(_, node) {
-			if (PYYAML_KEYS.has(node.value)) node.type = yaml.Scalar.QUOTE_DOUBLE;
-		},
+	return yaml.stringify({ version: VERSION, length: collection.length, value }, {
+		version: '1.1',
+		customTags: withoutMerge,
+		compat: PYYAML_KEYS,
+		lineWidth: 0,
+		indentSeq: false,
 	});
-	return doc.toString({ lineWidth: 0, indentSeq: false });
 }
