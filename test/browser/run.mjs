@@ -1,3 +1,4 @@
+// @ts-check
 // Runs the unit tests' browser bundle (see build.mjs) in headless
 // Chromium or Chrome and exits non-zero unless every test passed.
 // The browser is `chromium` on PATH, or whatever CHROMIUM names:
@@ -57,6 +58,7 @@ if (json === undefined || json === '') {
 	console.error(`no report in the page ${browser} returned`);
 	process.exit(1);
 }
+/** @type {test.Report} */
 const report = JSON.parse(json);
 const { lines, summary, passed } = test.format(report);
 console.log(`# ${report.userAgent}`);

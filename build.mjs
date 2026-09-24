@@ -1,3 +1,4 @@
+// @ts-check
 // Builds the browser outputs with esbuild: the library and the unit
 // tests. Everything that runs under node - the library npm consumers
 // import, and the CLI - is tsc's, as the prebuild script.
@@ -8,6 +9,7 @@ import * as fs from 'node:fs';
 
 import * as esbuild from 'esbuild';
 
+/** @type {esbuild.BuildOptions} */
 const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
 const tests = fs.globSync('src/**/*.test.ts');
 const browserEntry = [
