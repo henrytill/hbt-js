@@ -1,6 +1,61 @@
 <!doctype html>
-<meta charset="utf-8" />
-<title>hbt unit tests</title>
-<pre id="result">RUNNING</pre>
-<script type="application/json" id="report"></script>
-<script src="tests.js"></script>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" href="data:," />
+		<title>hbt unit tests</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				--pass: #1a7f37;
+				--fail: #cf222e;
+				--muted: #6e7781;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--pass: #3fb950;
+					--fail: #f85149;
+					--muted: #8b949e;
+				}
+			}
+
+			body {
+				font-family: system-ui, sans-serif;
+				max-width: 60rem;
+				margin: 2rem auto;
+				padding: 0 1rem;
+			}
+
+			#result {
+				font-family: ui-monospace, monospace;
+				line-height: 1.5;
+				white-space: pre-wrap;
+			}
+
+			.pass {
+				color: var(--pass);
+			}
+
+			.fail {
+				color: var(--fail);
+			}
+
+			.error {
+				color: var(--muted);
+			}
+
+			.summary {
+				font-weight: bold;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>hbt unit tests</h1>
+		<pre id="result">RUNNING</pre>
+		<script type="application/json" id="report"></script>
+		<script src="tests.js"></script>
+	</body>
+</html>
