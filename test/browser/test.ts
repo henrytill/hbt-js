@@ -58,8 +58,29 @@ export async function run(load: () => void): Promise<void> {
 	write({ userAgent: navigator.userAgent, tests: results });
 }
 
-// One line of the page's report, coloured by its stylesheet.
-function line(className: string, text: string): Element {
+export type Line = { readonly className: string; readonly text: string };
+
+// The report as text - a line per test and error, and a summary - for
+// both the page and run.mjs, which imports this from tsc's build of
+// this file so that the two cannot drift apart. className is what the
+// page's stylesheet colours each line by.
+export function format(report: Report): { readonly lines: readonly Line[]; readonly summary: Line; readonly passed: boolean } {
+	const lines: Line[] = [];
+	for (const { suites, name, ok, error } of report.tests) {
+		lines.push({ className: ok ? 'pass' : 'fail', text: `${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}` });
+		if (error !== undefined) lines.push({ className: 'error', text: `  ${error}` });
+	}
+	const failed = report.tests.filter((t) => !t.ok).length;
+	const passed = report.loadError === undefined && failed === 0;
+	const text = report.loadError !== undefined ?
+		`ERROR ${report.loadError}` :
+		passed ?
+		`PASS ${report.tests.length}` :
+		`FAIL ${failed} of ${report.tests.length}`;
+	return { lines, summary: { className: `summary ${passed ? 'pass' : 'fail'}`, text }, passed };
+}
+
+function span({ className, text }: Line): Element {
 	const span = document.createElement('span');
 	span.className = className;
 	span.textContent = `${text}\n`;
@@ -67,21 +88,9 @@ function line(className: string, text: string): Element {
 }
 
 function write(report: Report): void {
-	const lines: Element[] = [];
-	for (const { suites, name, ok, error } of report.tests) {
-		const label = [...suites, name].join(' > ');
-		lines.push(line(ok ? 'pass' : 'fail', `${ok ? 'ok' : 'not ok'} - ${label}`));
-		if (error !== undefined) lines.push(line('error', `  ${error}`));
-	}
-	const failed = report.tests.filter((t) => !t.ok).length;
-	const summary = report.loadError !== undefined ?
-		`ERROR ${report.loadError}` :
-		failed === 0 ?
-		`PASS ${report.tests.length}` :
-		`FAIL ${failed} of ${report.tests.length}`;
-	lines.push(line(`summary ${failed === 0 && report.loadError === undefined ? 'pass' : 'fail'}`, summary));
-	document.title = `${summary} - hbt unit tests`;
-	document.getElementById('result')?.replaceChildren(...lines);
+	const { lines, summary } = format(report);
+	document.title = `${summary.text} - hbt unit tests`;
+	document.getElementById('result')?.replaceChildren(...[...lines, summary].map(span));
 
 	// A script's text is serialized verbatim, not entity-escaped, so
 	// run.mjs needs no decoding; escaping every `<` keeps a `</script>`
