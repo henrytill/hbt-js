@@ -122,6 +122,14 @@ export class Collection {
 		this.addEdge(to, from);
 	}
 
+	/**
+	 * Returns a handle on every node, in insertion order. Unlike `id`,
+	 * this reaches a node the URL index lost to a repeated `insert`.
+	 */
+	ids(): Id[] {
+		return this.#nodes.map((_, index) => this.#makeId(index));
+	}
+
 	/** Returns the entity `id` names. */
 	entity(id: Id): Entity {
 		this.#checkId(id);
