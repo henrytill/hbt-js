@@ -1,11 +1,12 @@
 {
-	// Layout is the author's: a construct written on one line stays on
-	// one line, one written across several stays that way, and the very
-	// wide lineWidth means nothing is wrapped for length.
-	"lineWidth": 1000,
+	"lineWidth": 140,
 	"indentWidth": 4,
 	"useTabs": true,
 	"typescript": {
+		// Layout is mostly the author's: a construct whose first element
+		// starts on a new line stays multi-line even when it would fit
+		// on one, and only a line longer than lineWidth is wrapped.
+		"preferSingleLine": false,
 		"quoteStyle": "preferSingle",
 		// "prefer" leaves out the semicolon after the last member of
 		// a one-line type literal, which "always" would add.
