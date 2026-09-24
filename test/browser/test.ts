@@ -92,13 +92,13 @@ function write(report: Report): void {
 
 // JSON.stringify(report, null, '\t'), except that each test stays on
 // one line, so the report reads like the page's in DevTools' Elements
-// tab. Every value still goes through JSON.stringify.
+// tab. It walks the report's own fields, so one added to Report
+// cannot be left out, and an absent optional one is simply not there.
 function toJson(report: Report): string {
-	const tests = report.tests.map((t) => `\t\t${JSON.stringify(t)}`);
-	const fields = [
-		`\t"userAgent": ${JSON.stringify(report.userAgent)}`,
-		tests.length === 0 ? '\t"tests": []' : `\t"tests": [\n${tests.join(',\n')}\n\t]`,
-	];
-	if (report.loadError !== undefined) fields.push(`\t"loadError": ${JSON.stringify(report.loadError)}`);
+	const tests = `[\n${report.tests.map((t) => `\t\t${JSON.stringify(t)}`).join(',\n')}\n\t]`;
+	const fields = Object.entries(report).map(([k, v]) => {
+		const value = k === 'tests' && report.tests.length > 0 ? tests : JSON.stringify(v);
+		return `\t${JSON.stringify(k)}: ${value}`;
+	});
 	return `{\n${fields.join(',\n')}\n}`;
 }
