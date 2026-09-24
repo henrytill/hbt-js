@@ -6,7 +6,12 @@
 
 // Declared by hand rather than through lib "dom", which would let the
 // library reach for browser globals too.
-declare const document: { getElementById(id: string): { textContent: string | null } | null };
+type Element = { className: string; textContent: string | null; replaceChildren(...nodes: (Element | string)[]): void };
+declare const document: {
+	title: string;
+	getElementById(id: string): Element | null;
+	createElement(tag: string): Element;
+};
 declare const navigator: { userAgent: string };
 
 type Test = { readonly suites: readonly string[]; readonly name: string; readonly fn: () => unknown };
@@ -53,11 +58,20 @@ export async function run(load: () => void): Promise<void> {
 	write({ userAgent: navigator.userAgent, tests: results });
 }
 
+// One line of the page's report, coloured by its stylesheet.
+function line(className: string, text: string): Element {
+	const span = document.createElement('span');
+	span.className = className;
+	span.textContent = `${text}\n`;
+	return span;
+}
+
 function write(report: Report): void {
-	const lines: string[] = [];
+	const lines: Element[] = [];
 	for (const { suites, name, ok, error } of report.tests) {
-		lines.push(`${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}`);
-		if (error !== undefined) lines.push(`  ${error}`);
+		const label = [...suites, name].join(' > ');
+		lines.push(line(ok ? 'pass' : 'fail', `${ok ? 'ok' : 'not ok'} - ${label}`));
+		if (error !== undefined) lines.push(line('error', `  ${error}`));
 	}
 	const failed = report.tests.filter((t) => !t.ok).length;
 	const summary = report.loadError !== undefined ?
@@ -65,9 +79,9 @@ function write(report: Report): void {
 		failed === 0 ?
 		`PASS ${report.tests.length}` :
 		`FAIL ${failed} of ${report.tests.length}`;
-	lines.push(summary);
-	const result = document.getElementById('result');
-	if (result !== null) result.textContent = lines.join('\n');
+	lines.push(line(`summary ${failed === 0 && report.loadError === undefined ? 'pass' : 'fail'}`, summary));
+	document.title = `${summary} - hbt unit tests`;
+	document.getElementById('result')?.replaceChildren(...lines);
 
 	// A script's text is serialized verbatim, not entity-escaped, so
 	// run.mjs needs no decoding; escaping every `<` keeps a `</script>`
