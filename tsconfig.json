@@ -5,13 +5,14 @@
 	"include": ["src", "test/browser"],
 
 	"compilerOptions": {
-		// esbuild writes the JavaScript (see build.mjs); tsc
-		// typechecks and writes only the declarations. The root is
-		// "." because test/browser is typechecked too.
+		// tsc writes the library, unbundled, for npm consumers; esbuild
+		// writes the bundled CLI and browser outputs (see build.mjs).
+		// The root is "." because test/browser is typechecked too, so
+		// the library lands in dist/lib/src.
 		"rootDir": ".",
-		"outDir": "./dist/types",
+		"outDir": "./dist/lib",
 		"declaration": true,
-		"emitDeclarationOnly": true,
+		"sourceMap": true,
 
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module

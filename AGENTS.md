@@ -37,7 +37,7 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 ## Layout
 
-A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` to `dist/`. `tsc` typechecks and writes only the declarations (`emitDeclarationOnly`, to `dist/types/`), as the `prebuild` script; `build.mjs` then writes the JavaScript:
+A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twice over: `tsc` writes the library unbundled, for npm consumers, as the `prebuild` script, and `build.mjs` then uses esbuild to write the bundled outputs.
 
 | File                | Role                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
@@ -49,13 +49,12 @@ A single npm package, ESM (`"type": "module"`), bundled by esbuild from `src/` t
 | `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it     |
 | `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
 
-- `dist/cli.js` - the CLI, for node.
-- `dist/browser/hbt.js` - the library, for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose dependencies that bundle for both platforms.**
-- `dist/types/src/` - the declarations, from `tsc`. esbuild writes none. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository.
-- `dist/test/node/` - one bundle per test file.
-- `dist/test/browser/` - every test file in one classic script, beside the page that loads it.
+- `dist/lib/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests and `cli.js` here; `files` leaves them out.
+- `dist/cli.js` - the CLI, bundled by esbuild for node. It carries its dependencies, so one only the CLI uses can stay a `devDependency`.
+- `dist/browser/hbt.js` - the library, bundled by esbuild for the browser. Nothing consumes it yet; it is built so that a dependency reaching for a Node builtin fails the build (`Could not resolve "fs"`) the day it is added, not the day a browser front end is. **Choose library dependencies that bundle for both platforms.**
+- `dist/test/browser/` - every test file in one esbuild script, beside the page that loads it. Not published.
 
-Every bundle carries its dependencies, and esbuild resolves each package's `browser`/`node` export condition by platform, so the node and browser outputs may contain different builds of the same dependency. `package.json` excludes `dist/test` and the tests' declarations from `files`, so the tests are built but not published.
+esbuild resolves each package's `browser`/`node` export condition by platform, so the two bundles may contain different builds of the same dependency.
 
 ### `entity.ts`
 
@@ -80,11 +79,11 @@ Every bundle carries its dependencies, and esbuild resolves each package's `brow
 
 Two layers today: unit tests beside the code, run under node and again in a browser, and the conformance harness against the built CLI.
 
-**Unit tests.** `node --test` over the _bundled_ tests, so `npm test` builds first (its `pretest` script):
+**Unit tests.** `node --test` over the tests as `tsc` compiles them, beside the library they cover, so `npm test` builds first (its `pretest` script):
 
 ```sh
-npm test                                     # typecheck, build, then every dist/test/node/**/*.test.js
-node --test dist/test/node/entity.test.js    # one file, after a build
+npm test                                     # build, then every dist/lib/src/**/*.test.js
+node --test dist/lib/src/entity.test.js      # one file, after a build
 ```
 
 They are the only thing actually covering this repo right now. Write them against the exported API rather than internals - `Id`'s owner is private precisely so that nothing, tests included, can reach around it.
@@ -98,7 +97,7 @@ CHROMIUM=/path/to/chrome npm run test:browser         # any other Chromium or Ch
 
 This is the run that shows the library behaves the same in both places, which matters most once a parser takes an injected `DOMParser`: node's tests get the CLI's, the browser's get the native one. The stand-ins implement only what the tests use - `describe`, `it`, and `ok`/`equal`/`notEqual`/`deepEqual`/`throws` with strict semantics. **A test that reaches for more (`before`, `mock`, `assert.match`) fails only in the browser** until the stand-in grows it; `deepEqual` throws on a built-in it does not know rather than calling two of them equal.
 
-**Source maps.** esbuild writes one beside every bundle, but node reads them only under `--enable-source-maps`. `npm test` passes it, so a failure's stack names the line in `src/*.test.ts` rather than in the bundle. The browser report prints only each error's message, and `bin/hbt` does not pass the flag.
+**Source maps.** `tsc` and esbuild both write one beside every output, but node reads them only under `--enable-source-maps`. `npm test` passes it, so a failure's stack names the line in `src/*.test.ts` rather than in the compiled output. The browser report prints only each error's message, and `bin/hbt` does not pass the flag.
 
 **Shared fixtures.** `test/data/` is a git submodule of [hbt-data](https://github.com/henrytill/hbt-data), consumed by all five implementations. Clone with `--recurse-submodules`, or run `git submodule update --init`. Changing a fixture is a cross-language decision: it will go red in the others until their fixes land.
 
@@ -128,7 +127,7 @@ There is no system-wide toolchain: node, npm and the harness's Python come from 
 
 ```sh
 nix develop          # then work normally; linkNodeModulesHook links node_modules
-npm run build        # tsc (typecheck only), then build.mjs
+npm run build        # tsc (the library), then build.mjs (the bundles)
 npm test             # npm run build, then node --test
 npm run test:browser # npm run build, then the tests in headless Chromium
 npm run fmt          # prettier --write .
