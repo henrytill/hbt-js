@@ -14,6 +14,7 @@
 	},
 	"files": [
 		"dist",
+		"!dist/browser",
 		"!dist/test",
 		"!dist/tsc/test",
 		"!dist/tsc/src/**/*.test.*"
