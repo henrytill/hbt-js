@@ -6,7 +6,7 @@
 
 **Never work directly on `master`** - branch first, land via PR (see [Git Workflow](#git-workflow))
 
-**Run `npm run fmt` before every commit** - prettier is not a CI check, so a misformatted file lands silently and churns the next diff
+**Run `npm run fmt` before every commit** - dprint is not a CI check, so a misformatted file lands silently and churns the next diff
 
 **Every fixture is waived** - the CLI is still a stub, so conformance reports `xfail` across the board and says nothing about the library (see [Testing](#testing))
 
@@ -130,7 +130,7 @@ nix develop          # then work normally; linkNodeModulesHook links node_module
 npm run build        # tsc (the library), then build.mjs (the bundles)
 npm test             # npm run build, then node --test
 npm run test:browser # npm run build, then the tests in headless Chromium
-npm run fmt          # prettier --write .
+npm run fmt          # dprint fmt (`npx dprint check` reports without writing)
 ```
 
 The dev shell's `linkNodeModulesHook` links `node_modules` from the lockfile, so **a plain `npm install` inside it writes a real `node_modules` over the link**. Add a dependency with `--package-lock-only`, which updates `package.json` and `package-lock.json` without installing anything:
@@ -163,7 +163,7 @@ A `github:` flake reference carries no submodules, so it lacks the `hbt-data` in
 
 Both are required status checks. The npm job is the only one of the five that uses a `strategy.matrix`, which is why its check context carries the node version; **bumping that version renames the check**, so the branch protection contexts have to change in the same breath or `master` silently stops being gated.
 
-**Prettier runs nowhere in CI**, so formatting is on you - see REMEMBER. Two other workflows: `zizmor.yml` (Actions security scan, path-filtered to `.github/**` plus a weekly cron) and `update.yml` (monthly flake lock bump).
+**dprint runs nowhere in CI**, so formatting is on you - see REMEMBER. Two other workflows: `zizmor.yml` (Actions security scan, path-filtered to `.github/**` plus a weekly cron) and `update.yml` (monthly flake lock bump).
 
 ## Git Workflow
 
@@ -215,8 +215,8 @@ Do **not** hard-wrap prose in GitHub issue bodies, PR bodies, or comments - one 
 
 ## Conventions
 
-- **Tabs, width 4, 140 columns, single quotes, semicolons.** `.prettierrc` is the authority and `.dir-locals.el` matches it for Emacs. `.prettierignore` holds `test/data` (the corpus is hbt-data's to format) and `.github` (prettier reflows YAML to 4-space indentation with single-quoted strings, which would make these workflows diverge from the four sibling repos they are copied from).
-- **Prefer an existing config's own mechanism to a new config file.** Keeping the compiled tests out of the published package was first attempted here as a `tsconfig.build.json` / `tsconfig.test.json` split and rejected; the one-line answer was a negated pattern in `package.json`'s existing `files` field, for an identical tarball. npm, tsc and prettier each have a field or ignore file for most of these cases. If a split is genuinely needed, say why and ask first.
+- **Tabs, width 4, single quotes, semicolons, and line breaks are yours.** `dprint.json` is the authority and `.dir-locals.el` matches it for Emacs. dprint does not wrap for length (its `lineWidth` is set out of reach) and keeps the layout it is given: a construct whose first element starts on a new line stays multi-line, and one that does not is joined onto one line. So break a long line by hand, by putting a line break after the opening bracket. Its TypeScript, JSON and Markdown plugins come from npm, pinned by the lockfile, rather than from dprint's default plugin URLs, so formatting needs no network. `excludes` holds `test/data` (the corpus is hbt-data's to format). There is no YAML or HTML plugin, so `.github` and `test/browser/index.html` are not formatted - which for `.github` is deliberate, since the workflows are copied from the four sibling repos and should not diverge from them.
+- **Prefer an existing config's own mechanism to a new config file.** Keeping the compiled tests out of the published package was first attempted here as a `tsconfig.build.json` / `tsconfig.test.json` split and rejected; the one-line answer was a negated pattern in `package.json`'s existing `files` field, for an identical tarball. npm, tsc and dprint each have a field or ignore file for most of these cases. If a split is genuinely needed, say why and ask first.
 - **There is no linter.** The author's other TypeScript projects ([bits-js](https://github.com/henrytill/bits-js), [incr](https://github.com/henrytill/incr)) run eslint; this one does not yet, so `tsc` under `strict` is the whole static check.
 - **`.js` extensions on relative imports**, as ESM and `verbatimModuleSyntax` require: `from './entity.js'`, even though the file is `entity.ts`.
 - **Comments explain the bug or the decision that motivated the code.** The doc comments here name the sibling implementation and the test or issue that settled a rule; this is deliberate and worth continuing, since it stops a later simplification from quietly reintroducing a fixed bug or diverging from the other four.

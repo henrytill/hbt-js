@@ -1,0 +1,39 @@
+{
+	// Layout is the author's: a construct written on one line stays on
+	// one line, one written across several stays that way, and the very
+	// wide lineWidth means nothing is wrapped for length.
+	"lineWidth": 1000,
+	"indentWidth": 4,
+	"useTabs": true,
+	"typescript": {
+		"quoteStyle": "preferSingle",
+		// "prefer" leaves out the semicolon after the last member of
+		// a one-line type literal, which "always" would add.
+		"semiColons": "prefer",
+		"operatorPosition": "sameLine",
+		"constructorType.spaceAfterNewKeyword": true,
+		// Imports keep the order they were written in.
+		"module.sortImportDeclarations": "maintain",
+		"module.sortExportDeclarations": "maintain",
+		"importDeclaration.sortNamedImports": "maintain",
+		"exportDeclaration.sortNamedExports": "maintain"
+	},
+	"json": {
+		"trailingCommas": "never",
+		// Would reorder package.json's keys into dprint's conventional
+		// order.
+		"packageJson.applyConventions": false
+	},
+	"markdown": {
+		"textWrap": "maintain"
+	},
+	// test/data is hbt-data's to format.
+	"excludes": ["test/data", "dist"],
+	// From node_modules rather than a URL, so the lockfile pins them
+	// and formatting needs no network.
+	"plugins": [
+		"./node_modules/@dprint/typescript/plugin.wasm",
+		"./node_modules/@dprint/json/plugin.wasm",
+		"./node_modules/@dprint/markdown/plugin.wasm"
+	]
+}
