@@ -81,12 +81,13 @@ describe('formatYaml', () => {
 		const texts = ['yes', 'off', 'y', '2024-01-01', '1:20', '0x1F', '1_000', '~', 'null', '1700092800', '<<', '='];
 		const collection = new Collection();
 		collection.insert(mkEntity({ url: mkUrl('https://a.example/'), names: new Set(texts.map(mkName)) }));
-		const names: unknown[] = readBack(collection).value[0].entity.names;
+		const text = formatYaml(collection);
+		const names: unknown[] = yaml.parse(text, { version: '1.1' }).value[0].entity.names;
+		assert.deepEqual(new Set(names), new Set(texts));
 		// PyYAML also refuses a plain `<<` or `=`, which this parser
 		// reads back as strings either way; check that they are quoted.
-		assert.ok(formatYaml(collection).includes('- "<<"\n'));
-		assert.ok(formatYaml(collection).includes('- "="\n'));
-		assert.deepEqual(new Set(names), new Set(texts));
+		assert.ok(text.includes('- "<<"\n'));
+		assert.ok(text.includes('- "="\n'));
 	});
 
 	it('sorts by code point, not by UTF-16 code unit', () => {
