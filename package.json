@@ -19,7 +19,7 @@
 	"scripts": {
 		"prebuild": "tsc",
 		"build": "node build.mjs",
-		"fmt": "prettier --write .",
+		"fmt": "dprint fmt",
 		"pretest": "npm run build",
 		"test": "node --enable-source-maps --test 'dist/tsc/src/**/*.test.js'",
 		"pretest:browser": "npm run build",
@@ -39,10 +39,13 @@
 	},
 	"homepage": "https://github.com/henrytill/hbt-js#readme",
 	"devDependencies": {
+		"@dprint/json": "^0.24.0",
+		"@dprint/markdown": "^0.24.0",
+		"@dprint/typescript": "^0.96.1",
 		"@tsconfig/node24": "^24.0.5",
 		"@types/node": "^24.13.6",
+		"dprint": "^0.57.4",
 		"esbuild": "^0.28.2",
-		"prettier": "^3.9.8",
 		"typescript": "^7.0.2"
 	}
 }
