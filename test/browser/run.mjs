@@ -9,6 +9,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
 
+// The same formatting the page uses, from tsc's build of the stand-in,
+// which `npm run build` has written by the time this runs.
+import * as test from '../../dist/tsc/test/browser/test.js';
+
 const browser = process.env['CHROMIUM'] ?? 'chromium';
 const page = url.pathToFileURL(path.resolve('dist/test/browser/index.html')).href;
 
@@ -53,18 +57,7 @@ if (json === undefined || json === '') {
 	process.exit(1);
 }
 const report = JSON.parse(json);
+const { lines, summary, passed } = test.format(report);
 console.log(`# ${report.userAgent}`);
-if (report.loadError !== undefined) {
-	console.error(`the tests did not load: ${report.loadError}`);
-	process.exit(1);
-}
-let failed = 0;
-for (const { suites, name, ok, error } of report.tests) {
-	console.log(`${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}`);
-	if (!ok) {
-		failed += 1;
-		console.log(`  ${error}`);
-	}
-}
-console.log(failed === 0 ? `PASS ${report.tests.length}` : `FAIL ${failed} of ${report.tests.length}`);
-process.exitCode = failed === 0 ? 0 : 1;
+for (const { text } of [...lines, summary]) console.log(text);
+process.exitCode = passed ? 0 : 1;
