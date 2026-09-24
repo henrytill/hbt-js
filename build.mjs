@@ -10,10 +10,20 @@ import * as esbuild from 'esbuild';
 
 const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
 const tests = fs.globSync('src/**/*.test.ts');
-const browserEntry = [...tests.map((t) => `import './${t}';`), `import * as test from './test/browser/test.ts';`, 'test.run();'];
+const browserEntry = [
+	...tests.map((t) => `import './${t}';`),
+	`import * as test from './test/browser/test.ts';`,
+	'test.run();',
+];
 
 await Promise.all([
-	esbuild.build({ ...common, entryPoints: ['src/index.ts'], platform: 'browser', format: 'esm', outfile: 'dist/browser/hbt.js' }),
+	esbuild.build({
+		...common,
+		entryPoints: ['src/index.ts'],
+		platform: 'browser',
+		format: 'esm',
+		outfile: 'dist/browser/hbt.js',
+	}),
 
 	// The unit tests in one classic script, since Chrome refuses
 	// module scripts from file:// URLs. Both node modules they import
@@ -30,7 +40,10 @@ await Promise.all([
 		},
 		platform: 'browser',
 		format: 'iife',
-		alias: { 'node:test': './test/browser/test.ts', 'node:assert/strict': './test/browser/assert.ts' },
+		alias: {
+			'node:test': './test/browser/test.ts',
+			'node:assert/strict': './test/browser/assert.ts',
+		},
 		outfile: 'dist/test/browser/tests.js',
 	}),
 ]);
