@@ -2,7 +2,7 @@
 	// Visit https://aka.ms/tsconfig to read more about this file
 	"extends": "@tsconfig/node24/tsconfig.json",
 
-	"include": ["src", "test/browser"],
+	"include": ["src", "test/browser", "build.mjs"],
 
 	"compilerOptions": {
 		// tsc writes everything that runs under node - the library and
@@ -14,6 +14,8 @@
 		"outDir": "./dist/tsc",
 		"declaration": true,
 		"sourceMap": true,
+		"allowJs": true,
+		"rewriteRelativeImportExtensions": true,
 
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module

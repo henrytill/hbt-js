@@ -16,7 +16,7 @@ declare const navigator: { userAgent: string };
 
 type Test = { readonly suites: readonly string[]; readonly name: string; readonly fn: () => unknown };
 type Result = { readonly suites: readonly string[]; readonly name: string; readonly ok: boolean; readonly error?: string };
-type Report = { readonly userAgent: string; readonly tests: readonly Result[]; readonly loadError?: string };
+export type Report = { readonly userAgent: string; readonly tests: readonly Result[]; readonly loadError?: string };
 
 const tests: Test[] = [];
 const suites: string[] = [];
