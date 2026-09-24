@@ -45,7 +45,11 @@ function isDeepEqual(a: unknown, b: unknown): boolean {
 		const keys = Object.keys(a);
 		return (
 			keys.length === Object.keys(b).length &&
-			keys.every((k) => Object.hasOwn(b, k) && isDeepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]))
+			keys.every(
+				(k) =>
+					Object.hasOwn(b, k) &&
+					isDeepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+			)
 		);
 	}
 	throw new AssertionError(`deepEqual does not support ${Object.prototype.toString.call(a)}`);

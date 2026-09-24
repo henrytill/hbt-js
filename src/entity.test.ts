@@ -49,12 +49,20 @@ describe('mkTime', () => {
 
 describe('mkEntity', () => {
 	it('drops an update that repeats createdAt', () => {
-		const entity = mkEntity({ url: testUrl, createdAt: mkTime(10), updatedAt: new Set([mkTime(10), mkTime(20)]) });
+		const entity = mkEntity({
+			url: testUrl,
+			createdAt: mkTime(10),
+			updatedAt: new Set([mkTime(10), mkTime(20)]),
+		});
 		assert.deepEqual([...entity.updatedAt], [20]);
 	});
 
 	it('keeps an update strictly below createdAt', () => {
-		const entity = mkEntity({ url: testUrl, createdAt: mkTime(10), updatedAt: new Set([mkTime(5)]) });
+		const entity = mkEntity({
+			url: testUrl,
+			createdAt: mkTime(10),
+			updatedAt: new Set([mkTime(5)]),
+		});
 		assert.deepEqual([...entity.updatedAt], [5]);
 	});
 });
@@ -104,13 +112,19 @@ describe('entityEquals', () => {
 
 describe('entityMerge', () => {
 	it('keeps the earlier creation time and demotes the later one to an update', () => {
-		const merged = entityMerge(mkEntity({ url: testUrl, createdAt: mkTime(20) }), mkEntity({ url: testUrl, createdAt: mkTime(10) }));
+		const merged = entityMerge(
+			mkEntity({ url: testUrl, createdAt: mkTime(20) }),
+			mkEntity({ url: testUrl, createdAt: mkTime(10) }),
+		);
 		assert.equal(merged.createdAt, 10);
 		assert.deepEqual([...merged.updatedAt], [20]);
 	});
 
 	it('treats an absent creation time as the identity', () => {
-		const merged = entityMerge(mkEntity({ url: testUrl }), mkEntity({ url: testUrl, createdAt: mkTime(10) }));
+		const merged = entityMerge(
+			mkEntity({ url: testUrl }),
+			mkEntity({ url: testUrl, createdAt: mkTime(10) }),
+		);
 		assert.equal(merged.createdAt, 10);
 		assert.equal(merged.updatedAt.size, 0);
 	});
@@ -132,7 +146,11 @@ describe('entityMerge', () => {
 				labels: new Set([mkLabel('x')]),
 				extended: new Set([mkExtended('e')]),
 			}),
-			mkEntity({ url: testUrl, names: new Set([mkName('b')]), labels: new Set([mkLabel('y')]) }),
+			mkEntity({
+				url: testUrl,
+				names: new Set([mkName('b')]),
+				labels: new Set([mkLabel('y')]),
+			}),
 		);
 		assert.deepEqual(merged.names, new Set([mkName('a'), mkName('b')]));
 		assert.deepEqual(merged.labels, new Set([mkLabel('x'), mkLabel('y')]));
@@ -140,7 +158,10 @@ describe('entityMerge', () => {
 	});
 
 	it('combines flags with or, and an absent flag stays absent', () => {
-		const merged = entityMerge(mkEntity({ url: testUrl, shared: false, toRead: true }), mkEntity({ url: testUrl, shared: true }));
+		const merged = entityMerge(
+			mkEntity({ url: testUrl, shared: false, toRead: true }),
+			mkEntity({ url: testUrl, shared: true }),
+		);
 		assert.equal(merged.shared, true);
 		assert.equal(merged.toRead, true);
 		assert.equal(merged.isFeed, undefined);
