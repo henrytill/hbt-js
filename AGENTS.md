@@ -23,7 +23,7 @@ A TypeScript implementation of hbt, a bookmark and document collection tool, dev
 
 The tool reads bookmarks from Pinboard exports (JSON/XML), Netscape bookmark HTML, and Markdown, merges them into a collection keyed by URL, and writes the result as YAML or HTML.
 
-**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested. Nothing else is: there are no parsers, no formatters, and no CLI. `src/cli.ts` prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
+**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested, and so is the YAML formatter. Nothing else is: there are no parsers, no HTML formatter, and no CLI. `src/cli.ts` prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
 
 The implementations share a wire format and a fixture corpus, so a semantic question - what merging two entities that share a timestamp should produce, say - gets settled once and pinned in [hbt-data](https://github.com/henrytill/hbt-data), then implemented in each. Issues are filed as companions across the repos; the discussion usually lives in whichever one hit it first. **hbt-rs's `AGENTS.md` carries the long form of the merge rules**, each with the issue that settled it; this file states what the code here does and does not restate the arguments.
 
@@ -40,15 +40,16 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twice over: `tsc` writes everything that runs under node - the library and the CLI - unbundled, as the `prebuild` script, and `build.mjs` then uses esbuild to write the browser bundles.
 
-| File                | Role                                                                                                |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| `src/entity.ts`     | The branded types, `Entity`, `mkEntity`, `entityEquals`, `entityMerge`, `ParseError`                |
-| `src/collection.ts` | `Id` and `Collection` - the graph, the URL index, `upsert`, `updateLabels`                          |
-| `src/index.ts`      | The library's entry point: re-exports each module above as a namespace (`entity`, `collection`)     |
-| `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                   |
-| `src/*.test.ts`     | Unit tests, beside the code they cover                                                              |
-| `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it     |
-| `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake |
+| File                | Role                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `src/entity.ts`     | The branded types, `Entity`, `mkEntity`, `entityEquals`, `entityMerge`, `ParseError`                    |
+| `src/collection.ts` | `Id` and `Collection` - the graph, the URL index, `upsert`, `updateLabels`                              |
+| `src/yaml.ts`       | `formatYaml` - a `Collection` as `collection.schema.json` describes it                                  |
+| `src/index.ts`      | The library's entry point: re-exports each module above as a namespace (`entity`, `collection`, `yaml`) |
+| `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                       |
+| `src/*.test.ts`     | Unit tests, beside the code they cover                                                                  |
+| `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it         |
+| `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake     |
 
 - `dist/tsc/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests here; `files` leaves them out.
 - `dist/tsc/src/cli.js` - the CLI, from `tsc` too, and what `bin` names; `exports` does not, so consumers cannot import it. Unbundled, it runs the same modules consumers get, so conformance tests the shipped library. The cost is that **a dependency only the CLI uses is still a `dependency`**, installed by every consumer: prefer a light one, or load a heavy one with a dynamic `import()`.
@@ -75,6 +76,16 @@ A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twi
 - **`entities()` returns a copy**, because `updateLabels` replaces the array and a handed-out reference would go stale.
 - **`updateLabels` does not chain within a pass**: with `a -> b` and `b -> c`, an `a` becomes `b`. A `null` value drops the label, which is how a mappings file spells a deletion (the empty string never reaches here, `mkLabel` refusing it).
 - **`addEdge` dedupes with a linear scan**, so building edges over a flat export is quadratic. Known: #3.
+
+### `yaml.ts`
+
+`formatYaml` builds the schema's shape (`uri`, not `url`; `id`, `entity`, `edges` per node) from `ids()`, which reaches every node where `id(url)` would miss one the insert hole shadowed, and hands it to the [`yaml`](https://eemeli.org/yaml/) package.
+
+- **The sets are sorted, by code point.** The harness compares set-valued fields in order, and the order the other four agree on is hbt-rs's `BTreeSet` - UTF-8 byte order for strings, numeric for `updatedAt`. A JS `Set` iterates in insertion order and `Array.prototype.sort` compares UTF-16 code units, which differ from code points above U+D800; `compareCodePoints` is what closes that gap. Edges are not sorted: they keep the order they were added, as hbt-rs's `Vec` does.
+- **It writes YAML 1.1, because the harness reads with PyYAML.** Under 1.2 the package leaves `yes`, `off`, `2024-01-01` and `1:20` plain, and PyYAML reads them back as a boolean, a date and an integer. 1.1 still leaves two strings plain that PyYAML's safe loader refuses outright: `<<` (the merge key) and `=` (the value key). Those are forced into quotes, and the package's merge tag is filtered out of the schema because it otherwise writes `<<` plain whatever the node says; its `merge: false` option does not remove it.
+- **Absent fields are left out**, as hbt-rs leaves them out; so is an empty `extended`. The harness treats absent, `null` and `[]` alike, but a `createdAt` of 0 is an instant and is written.
+
+Checked beyond the unit tests by rebuilding a `Collection` from every `*.expected.yaml` in the corpus and comparing `formatYaml`'s output with the harness's own `compare`: all of them match.
 
 ## Testing
 
@@ -219,6 +230,7 @@ Do **not** hard-wrap prose in GitHub issue bodies, PR bodies, or comments - one 
 - **Tabs, width 4, 140 columns, single quotes, semicolons, and line breaks mostly yours.** `dprint.json` is the authority and `.dir-locals.el` matches it for Emacs. dprint wraps only a line longer than 140 columns; otherwise it keeps the layout it is given (`preferSingleLine: false`): a construct whose first element starts on a new line stays multi-line even when it would fit on one, and one that does not stays on one line. So to break a construct across lines, put a line break after its opening bracket. Its TypeScript, JSON and Markdown plugins come from npm, pinned by the lockfile, rather than from dprint's default plugin URLs, so formatting needs no network. `excludes` holds `test/data` (the corpus is hbt-data's to format). There is no YAML or HTML plugin, so `.github` and `test/browser/index.html` are not formatted - which for `.github` is deliberate, since the workflows are copied from the four sibling repos and should not diverge from them.
 - **Prefer an existing config's own mechanism to a new config file.** Keeping the compiled tests out of the published package was first attempted here as a `tsconfig.build.json` / `tsconfig.test.json` split and rejected; the one-line answer was a negated pattern in `package.json`'s existing `files` field, for an identical tarball. npm, tsc and dprint each have a field or ignore file for most of these cases. If a split is genuinely needed, say why and ask first.
 - **There is no linter.** The author's other TypeScript projects ([bits-js](https://github.com/henrytill/bits-js), [incr](https://github.com/henrytill/incr)) run eslint; this one does not yet, so `tsc` under `strict` is the whole static check. **It covers the `.mjs` scripts too**: `build.mjs` and `test/browser/run.mjs` start with `// @ts-check`, and `allowJs` brings them into the program, so a script gets the same strictness as the library. Give a new script the same header, and add it to `include` if it lives outside `test/browser`. `tsc` also emits copies of them into `dist/tsc/`, which nothing runs or publishes.
+- **Third-party modules are imported as namespaces**: `import * as yaml from 'yaml'` and `yaml.stringify(...)`, never `import { stringify } from 'yaml'`, so a bare function name always means one of this repo's own. Relative imports stay named (`import { mkEntity } from './entity.js'`).
 - **`.js` extensions on relative imports**, as ESM and `verbatimModuleSyntax` require: `from './entity.js'`, even though the file is `entity.ts`. The exception is a plain node script importing TypeScript source, which node runs by stripping its types: `run.mjs` imports `./test.ts`, and `rewriteRelativeImportExtensions` is on so that `tsc` accepts it. The `.ts` modules themselves keep `.js`.
 - **Comments explain the bug or the decision that motivated the code.** The doc comments here name the sibling implementation and the test or issue that settled a rule; this is deliberate and worth continuing, since it stops a later simplification from quietly reintroducing a fixed bug or diverging from the other four.
 - **Optional fields are omitted, not nulled**, on the wire and in the type. Build them with the `...(x !== undefined && { x })` spread that `entityMerge` uses, which `exactOptionalPropertyTypes` is what makes necessary.
