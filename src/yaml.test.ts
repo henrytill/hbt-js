@@ -90,6 +90,19 @@ describe('formatYaml', () => {
 		assert.ok(text.includes('- "="\n'));
 	});
 
+	it('escapes the characters PyYAML refuses or folds', () => {
+		// Tab, DEL and C1 are outside PyYAML's printable set, or not
+		// allowed plain; U+0085, U+2028 and U+2029 are line breaks to
+		// YAML 1.1 and fold to a space or vanish unless escaped.
+		const texts = ['a\tb', '\tlead', 'a\x7f', '\x80\x9f', 'a\x85b', 'x\u2028y', 'a\u2029', 'a\ufffe', 'a\nb', 'say "\\x"\x7f'];
+		const collection = new Collection();
+		collection.insert(mkEntity({ url: mkUrl('https://a.example/'), names: new Set(texts.map(mkName)) }));
+		const text = formatYaml(collection);
+		assert.ok(!/[\t\x7f-\x9f\u2028\u2029\ufffe]/.test(text));
+		const names: unknown[] = yaml.parse(text, { version: '1.1' }).value[0].entity.names;
+		assert.deepEqual(new Set(names), new Set(texts));
+	});
+
 	it('sorts by code point, not by UTF-16 code unit', () => {
 		const collection = new Collection();
 		const labels = ['\u{1F600}', '', 'b', 'a'];
