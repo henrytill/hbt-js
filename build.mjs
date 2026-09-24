@@ -11,9 +11,10 @@ import * as esbuild from 'esbuild';
 const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
 const tests = fs.globSync('src/**/*.test.ts');
 const browserEntry = [
-	...tests.map((t) => `import './${t}';`),
 	`import * as test from './test/browser/test.ts';`,
-	'test.run();',
+	'test.run(() => {',
+	...tests.map((t) => `\trequire('./${t}');`),
+	'});',
 ];
 
 await Promise.all([
@@ -27,9 +28,11 @@ await Promise.all([
 
 	// The unit tests in one classic script, since Chrome refuses
 	// module scripts from file:// URLs. Both node modules they import
-	// are swapped for the shims in test/browser/, and `test.run` goes
-	// last in browserEntry: imports evaluate in order, so every test
-	// has registered by then.
+	// are swapped for the shims in test/browser/. browserEntry loads
+	// the test files with require() rather than import, which esbuild
+	// evaluates lazily at the call, so `test.run` can catch a throw
+	// while they load and every test has registered before it runs
+	// them.
 	esbuild.build({
 		...common,
 		stdin: {

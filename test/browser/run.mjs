@@ -43,13 +43,28 @@ if (result.error !== undefined) {
 	process.exit(2);
 }
 
-// test/browser/test.ts writes its report into <pre id="result">, which
-// reads RUNNING until then, so a bundle that throws on load fails too.
-const report = /<pre id="result">([\s\S]*?)<\/pre>/.exec(result.stdout)?.[1];
-if (report === undefined) {
+// test/browser/test.ts writes its report as JSON into the empty
+// <script id="report">, whose text the page serializes verbatim, so
+// all that is left to parse is the JSON. Still empty means the bundle
+// never got as far as writing it, which fails too.
+const json = /<script type="application\/json" id="report">([\s\S]*?)<\/script>/.exec(result.stdout)?.[1];
+if (json === undefined || json === '') {
 	console.error(`no report in the page ${browser} returned`);
 	process.exit(1);
 }
-const text = report.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&');
-console.log(text);
-process.exitCode = /^PASS /m.test(text) ? 0 : 1;
+const report = JSON.parse(json);
+console.log(`# ${report.userAgent}`);
+if (report.loadError !== undefined) {
+	console.error(`the tests did not load: ${report.loadError}`);
+	process.exit(1);
+}
+let failed = 0;
+for (const { suites, name, ok, error } of report.tests) {
+	console.log(`${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}`);
+	if (!ok) {
+		failed += 1;
+		console.log(`  ${error}`);
+	}
+}
+console.log(failed === 0 ? `PASS ${report.tests.length}` : `FAIL ${failed} of ${report.tests.length}`);
+process.exitCode = failed === 0 ? 0 : 1;
