@@ -50,8 +50,7 @@ export class ParseError extends Error {
  * is not public API, so `src/whatwg-url.d.ts` declares what is used
  * and the unit tests are what catch a move. It stays on whatwg-url 15:
  * from 16 the parser pulls in @exodus/bytes' legacy encoding tables,
- * which doubled the browser bundle again (0.4 MB to 1 MB, most of the
- * 0.4 being tr46's IDNA mapping table).
+ * which more than double the browser bundle.
  *
  * The form is the current spec's, which is not quite hbt-rs's: its
  * `url` crate (2.5.8) still leaves `^` in a path raw, leaves a space
