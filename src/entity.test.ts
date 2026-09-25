@@ -10,6 +10,32 @@ describe('mkUrl', () => {
 		assert.equal(mkUrl('https://EXAMPLE.com'), 'https://example.com/');
 	});
 
+	// The platforms' own URL parsers disagree on these, so each pins
+	// the current WHATWG spec's form, which mkUrl must give in node and
+	// in a browser alike.
+	it('gives the spec form where the platforms disagree', () => {
+		const cases: [string, string][] = [
+			['https://x.com/a|b^c', 'https://x.com/a|b%5Ec'], // Chromium encodes |; node 22 and hbt-rs leave ^
+			["https://a'b@x.com/", "https://a'b@x.com/"], // Chromium encodes '
+			["foo://h/?a'b", "foo://h/?a'b"], // Chromium encodes ' in a non-special query
+			['https://a*b.com/', 'https://a*b.com/'], // Chromium encodes * in a host
+			['foo:a b ?q', 'foo:a b%20?q'], // hbt-rs leaves the space before ? raw
+			['file:///C|/x', 'file:///C:/x'], // hbt-rs and Chromium keep the |
+		];
+		for (const [input, expected] of cases) {
+			assert.equal(mkUrl(input), expected);
+		}
+	});
+
+	it('keeps an escaped | apart from a raw one', () => {
+		assert.notEqual(mkUrl('https://x.com/a%7Cb'), mkUrl('https://x.com/a|b'));
+	});
+
+	it('rejects a host the spec forbids', () => {
+		assert.throws(() => mkUrl('https://a b.com/'), ParseError);
+		assert.throws(() => mkUrl('https://x\u200d.com/'), ParseError);
+	});
+
 	it('rejects a string that is not a URL', () => {
 		assert.throws(() => mkUrl('not a url'), ParseError);
 	});

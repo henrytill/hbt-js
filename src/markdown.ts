@@ -25,9 +25,10 @@ const MAX_NESTING = 200;
  * pulldown-cmark's extensions: no tables, strikethrough or linkify,
  * and raw HTML parsed as HTML rather than taken as text. A link's
  * destination is left as written, backslash escapes and entities
- * aside, for `mkUrl` to normalize as hbt-rs's `Url::parse` does:
- * markdown-it's own normalization percent-encodes characters such as
- * `[` that the URL parser leaves alone, so it would change the key.
+ * aside, for `mkUrl` alone to normalize, as hbt-rs leaves it to
+ * `Url::parse`: markdown-it's own normalization percent-encodes
+ * characters such as `[` that the URL parser leaves alone, so it
+ * would change the key.
  * Nor is any scheme refused, where markdown-it refuses `javascript:`
  * and three others by default: hbt-rs records such a link like any
  * other.

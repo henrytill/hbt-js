@@ -1,3 +1,5 @@
+import * as whatwgUrl from 'whatwg-url/lib/url-state-machine.js';
+
 declare const brand: unique symbol;
 
 type Brand<T, B extends string> = T & { readonly [brand]: B };
@@ -31,13 +33,37 @@ export class ParseError extends Error {
 /**
  * Parses a URL into its normalized form, throwing a `ParseError` if
  * it is not one.
+ *
+ * This uses whatwg-url, the spec's reference implementation, rather
+ * than the platform's `URL`, because the platforms disagree and the
+ * result is the collection's key. Chromium 141 percent-encodes `|` in
+ * a path and `'` in userinfo, and accepts hosts such as `a b.com`
+ * that the spec rejects; node's result moves with its ada version
+ * (node 22 leaves `^` in a path, node 24 encodes it). One parser
+ * everywhere gives one key everywhere.
+ *
+ * It imports the parser module directly, not the package's entry,
+ * which also loads the `URL` class's WebIDL wrapper: that reads
+ * `SharedArrayBuffer.prototype` at load time, and a browser page that
+ * is not cross-origin isolated has no `SharedArrayBuffer`, so the
+ * import throws (jsdom/webidl-conversions#31, still open). The module
+ * is not public API, so `src/whatwg-url.d.ts` declares what is used
+ * and the unit tests are what catch a move. It stays on whatwg-url 15:
+ * from 16 the parser pulls in @exodus/bytes' legacy encoding tables,
+ * which doubled the browser bundle again (0.4 MB to 1 MB, most of the
+ * 0.4 being tr46's IDNA mapping table).
+ *
+ * The form is the current spec's, which is not quite hbt-rs's: its
+ * `url` crate (2.5.8) still leaves `^` in a path raw, leaves a space
+ * before `?` or `#` in an opaque path raw, and keeps a `|` drive
+ * letter in a `file:` URL.
  */
 export function mkUrl(s: string): Url {
-	const url = URL.parse(s);
+	const url = whatwgUrl.parseURL(s);
 	if (url === null) {
 		throw new ParseError(`URL parsing error: ${s}`);
 	}
-	return url.href as Url;
+	return whatwgUrl.serializeURL(url) as Url;
 }
 
 /**
