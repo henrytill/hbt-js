@@ -23,7 +23,7 @@ A TypeScript implementation of hbt, a bookmark and document collection tool, dev
 
 The tool reads bookmarks from Pinboard exports (JSON/XML), Netscape bookmark HTML, and Markdown, merges them into a collection keyed by URL, and writes the result as YAML or HTML.
 
-**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested, and so is the YAML formatter. Nothing else is: there are no parsers, no HTML formatter, and no CLI. `src/cli.ts` prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
+**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested, and so are the YAML formatter and the Markdown parser. Nothing else is: there are no other parsers, no HTML formatter, and no CLI. `src/cli.ts` prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
 
 The implementations share a wire format and a fixture corpus, so a semantic question - what merging two entities that share a timestamp should produce, say - gets settled once and pinned in [hbt-data](https://github.com/henrytill/hbt-data), then implemented in each. Issues are filed as companions across the repos; the discussion usually lives in whichever one hit it first. **hbt-rs's `AGENTS.md` carries the long form of the merge rules**, each with the issue that settled it; this file states what the code here does and does not restate the arguments.
 
@@ -31,7 +31,7 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 The order the rest is expected to land in, each step its own PR. It is provisional, not settled: revise it here when it changes, and mark a step done when it merges.
 
-1. **Markdown parser**, on [commonmark.js](https://github.com/commonmark/commonmark.js), with heading nesting becoming parent/child edges. About 20 fixtures; read `test/data/markdown/` before assuming the library fits every edge of it.
+1. **Markdown parser**, on [markdown-it](https://github.com/markdown-it/markdown-it) rather than the [commonmark.js](https://github.com/commonmark/commonmark.js) first planned. **Done**: `src/markdown.ts`, which passes all 25 fixtures, though conformance cannot show it until the CLI lands.
 2. **CLI shim** in `src/cli.ts`: arguments (`-t`, `--info`, the format from the extension) and file reading, kept out of the library. The harness calls `hbt -t yaml <input>`. `--version` belongs here too (see [Nix](#nix)).
 3. **Pinboard JSON, then Pinboard XML, then Netscape HTML.** Remove waivers as fixtures pass, as [Testing](#testing) describes.
 
@@ -44,22 +44,23 @@ The HTML and XML parsers are written against the DOM API and take a `DOMParser` 
 - **Make illegal states unrepresentable**: where TypeScript cannot, constrain construction to one place. `mkEntity` is the only thing that builds an `Entity`; `mkName`, `mkLabel` and `mkExtended` are the only things that build their brands, and each refuses the empty string.
 - **The library runs in a browser too**: hbt-js starts as a CLI but is meant to run in a browser as well, so everything except `src/cli.ts` stays free of Node APIs (`fs`, `process`, `path`, `Buffer`). The library takes and returns strings; reading files, parsing arguments and choosing a format from an extension belong to the CLI. A parser that needs a platform facility, such as a `DOMParser` for HTML and XML, takes it as an argument, so the browser passes its own and the CLI supplies one.
   - **Nothing enforces this yet, and the plan is for `tsc` to.** `@tsconfig/node24` gives every file Node's types, the library's included, so `process.env` in `src/entity.ts` typechecks. The browser bundle rejects an import of `fs`, but esbuild leaves a global like `process` or `Buffer` alone, so that would build and then crash in a browser. Adding `DOM` to `lib` would make this worse, not better: every file would see both platforms. The plan is one set of environment types per part instead, as a tsconfig per part linked by project references and built with `tsc -b`: the library with neither (`types: []`, no `DOM`); the CLI, the unit tests and the `.mjs` scripts with `node`; `test/browser/*.ts` with the DOM types it declares by hand. An injected facility is then a small interface the library declares, the way `test/browser/test.ts` declares `document`, which the native `DOMParser` and the CLI's alike satisfy. **Do this when the first parser that takes a platform facility lands** - Pinboard XML, in the [Plan](#plan)'s order, since the Markdown parser needs none; check first that TypeScript 7's `tsc -b` handles it.
-- **No recursion**: avoid recursive calls over user-provided data, which can nest arbitrarily deeply. The parsers in the other four all walk an explicit stack; the ones here should too when they land.
+- **No recursion**: avoid recursive calls over user-provided data, which can nest arbitrarily deeply. The parsers in the other four all walk an explicit stack; the ones here should too when they land. A dependency counts: markdown-it's block parser recurses once per level of nesting, so `src/markdown.ts` bounds it and refuses a document past the bound (see [below](#markdownts)).
 
 ## Layout
 
 A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twice over: `tsc` writes everything that runs under node - the library and the CLI - unbundled, as the `prebuild` script, and `build.mjs` then uses esbuild to write the browser bundles.
 
-| File                | Role                                                                                                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------- |
-| `src/entity.ts`     | The branded types, `Entity`, `mkEntity`, `entityEquals`, `entityMerge`, `ParseError`                    |
-| `src/collection.ts` | `Id` and `Collection` - the graph, the URL index, `upsert`, `updateLabels`                              |
-| `src/yaml.ts`       | `formatYaml` - a `Collection` as `collection.schema.json` describes it                                  |
-| `src/index.ts`      | The library's entry point: re-exports each module above as a namespace (`entity`, `collection`, `yaml`) |
-| `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                       |
-| `src/*.test.ts`     | Unit tests, beside the code they cover                                                                  |
-| `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it         |
-| `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake     |
+| File                | Role                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/entity.ts`     | The branded types, `Entity`, `mkEntity`, `entityEquals`, `entityMerge`, `ParseError`                                |
+| `src/collection.ts` | `Id` and `Collection` - the graph, the URL index, `upsert`, `updateLabels`                                          |
+| `src/yaml.ts`       | `formatYaml` - a `Collection` as `collection.schema.json` describes it                                              |
+| `src/markdown.ts`   | `parseMarkdown` - a Markdown document as a `Collection`                                                             |
+| `src/index.ts`      | The library's entry point: re-exports each module above as a namespace (`entity`, `collection`, `yaml`, `markdown`) |
+| `src/cli.ts`        | The CLI entry point, and the only module that may use Node APIs. Currently a stub                                   |
+| `src/*.test.ts`     | Unit tests, beside the code they cover                                                                              |
+| `test/browser/`     | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it                     |
+| `test/data/`        | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake                 |
 
 - `dist/tsc/src/` - the library from `tsc`: one `.js`, `.d.ts` and source map per module, and what `package.json`'s `exports` names, so consumers can import only `hbt` itself. It is unbundled, so its third-party imports stay imports: **a dependency the library uses is a `dependency`**, which the consumer installs along with its types, and the consumer's bundler picks that package's browser or node build. The extra `src/` is there because `tsc` also typechecks `test/browser/`, so its root is the repository. `tsc` also emits the tests here; `files` leaves them out.
 - `dist/tsc/src/cli.js` - the CLI, from `tsc` too, and what `bin` names; `exports` does not, so consumers cannot import it. Unbundled, it runs the same modules consumers get, so conformance tests the shipped library. The cost is that **a dependency only the CLI uses is still a `dependency`**, installed by every consumer: prefer a light one, or load a heavy one with a dynamic `import()`.
@@ -97,6 +98,18 @@ A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twi
 - **Absent fields are left out**, as hbt-rs leaves them out; so is an empty `extended`. The harness treats absent, `null` and `[]` alike, but a `createdAt` of 0 is an instant and is written.
 
 Checked beyond the unit tests by rebuilding a `Collection` from every `*.expected.yaml` in the corpus and comparing `formatYaml`'s output with the harness's own `compare`: all of them match.
+
+### `markdown.ts`
+
+`parseMarkdown` reads a document with [markdown-it](https://github.com/markdown-it/markdown-it) and walks its tokens: an H1 is a date and starts afresh, an H2 and below is a label, an inline link or URI autolink is a bookmark, and a nested list joins its links to the one above. Its doc comment gives the rules in full.
+
+- **It follows hbt-rs's `from_markdown` token for token, quirks included.** Only the most recently opened construct decides what text means, so emphasis inside a link ends its name; a list's parent is the last link before it, even one in the paragraph above; a reference link or email autolink is an error. The corpus pins none of these, and hbt-go's goldmark walk differs from hbt-rs on most of them, so matching hbt-rs is a choice, not something the fixtures check.
+- **markdown-it is configured to read what pulldown-cmark reads**: the `commonmark` preset (no extensions, raw HTML as HTML), destinations kept as written so that `mkUrl` normalizes them rather than markdown-it's `mdurl` (which would encode `[` and change the key), and no scheme refused, since hbt-rs keeps `javascript:` links.
+- **Dates are chrono's `%B %-d, %Y`**, probed against hbt-rs's binary: full or three-letter month in any case, any run of whitespace (or none) where the format has a space, a day of one or two digits, and a year of at most four digits unless signed, within chrono's range.
+- **Two differences from hbt-rs are deliberate**, both where markdown-it follows CommonMark to the letter: text broken by a backslash escape or an entity is one label, not several, and U+0000 becomes U+FFFD.
+- **Nesting is capped at 200 of markdown-it's levels**, 99 nested lists. Unbounded, its recursion overflows node's stack between 1000 and 2000 levels; at its preset's limit of 20 it silently drops the deeper content. Past the cap, `parseMarkdown` throws. hbt-rs has no limit.
+
+Checked beyond the unit tests by running the corpus's Markdown fixtures through the harness with a scratch shim (all 25 pass), and by a differential fuzz against hbt-rs's binary over generated documents, which agreed on every one but those hitting the two differences above.
 
 ## Testing
 
