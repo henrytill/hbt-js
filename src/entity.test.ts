@@ -10,12 +10,10 @@ describe('mkUrl', () => {
 		assert.equal(mkUrl('https://EXAMPLE.com'), 'https://example.com/');
 	});
 
-	// The platforms' own URL parsers disagree on these, so each pins
-	// the current WHATWG spec's form, which mkUrl must give in node and
-	// in a browser alike.
 	it('gives the spec form where the platforms disagree', () => {
 		const cases: [string, string][] = [
 			['https://x.com/a|b^c', 'https://x.com/a|b%5Ec'], // Chromium encodes |; node 22 and hbt-rs leave ^
+			['https://x.com/a%7Cb', 'https://x.com/a%7Cb'], // stays apart from a raw |
 			["https://a'b@x.com/", "https://a'b@x.com/"], // Chromium encodes '
 			["foo://h/?a'b", "foo://h/?a'b"], // Chromium encodes ' in a non-special query
 			['https://a*b.com/', 'https://a*b.com/'], // Chromium encodes * in a host
@@ -25,10 +23,6 @@ describe('mkUrl', () => {
 		for (const [input, expected] of cases) {
 			assert.equal(mkUrl(input), expected);
 		}
-	});
-
-	it('keeps an escaped | apart from a raw one', () => {
-		assert.notEqual(mkUrl('https://x.com/a%7Cb'), mkUrl('https://x.com/a|b'));
 	});
 
 	it('rejects a host the spec forbids', () => {
