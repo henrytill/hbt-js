@@ -22,11 +22,13 @@ const summary = (collection: Collection) =>
 const NOV_15 = 1700006400;
 const DATED = '# November 15, 2023\n\n';
 
-/** The names of the bookmarks `input` makes, in order. */
-const names = (input: string): string[][] => summary(parseMarkdown(DATED + input)).map((node) => node.names);
+/** One field of each bookmark a document under `DATED` makes, in order. */
+const pluck = <K extends keyof ReturnType<typeof summary>[number]>(key: K) => (input: string) =>
+	summary(parseMarkdown(DATED + input)).map((node) => node[key]);
 
-/** The labels of the bookmarks `input` makes, in order. */
-const labels = (input: string): string[][] => summary(parseMarkdown(DATED + input)).map((node) => node.labels);
+const names = pluck('names');
+const labels = pluck('labels');
+const edges = pluck('edges');
 
 describe('parseMarkdown', () => {
 	it('reads nothing from an empty document', () => {
@@ -62,31 +64,27 @@ describe('parseMarkdown', () => {
 	});
 
 	it('clears the labels at the next H1', () => {
-		assert.deepEqual(summary(parseMarkdown(DATED + '## A\n\n# November 16, 2023\n\n- <https://a.com>\n'))[0]?.labels, []);
+		assert.deepEqual(labels('## A\n\n# November 16, 2023\n\n- <https://a.com>\n'), [[]]);
 	});
 
 	it('joins a nested link to the one it is under, both ways', () => {
 		const input = '- [A](https://a.com)\n  - [B](https://b.com)\n    - [C](https://c.com)\n  - [D](https://d.com)\n';
-		assert.deepEqual(
-			summary(parseMarkdown(DATED + input)).map((node) => node.edges),
-			[[1, 3], [0, 2], [1], [0]],
-		);
+		assert.deepEqual(edges(input), [[1, 3], [0, 2], [1], [0]]);
 	});
 
 	it('does not join the items of a list that starts indented', () => {
 		const input = '  - [A](https://a.com)\n- [B](https://b.com)\n';
-		assert.deepEqual(
-			summary(parseMarkdown(DATED + input)).map((node) => node.edges),
-			[[], []],
-		);
+		assert.deepEqual(edges(input), [[], []]);
 	});
 
 	it('parents a list under a bare link in the paragraph above it, as hbt-rs does', () => {
 		const input = '[A](https://a.com)\n\n- [B](https://b.com)\n';
-		assert.deepEqual(
-			summary(parseMarkdown(DATED + input)).map((node) => node.edges),
-			[[1], [0]],
-		);
+		assert.deepEqual(edges(input), [[1], [0]]);
+	});
+
+	it('starts each name afresh, whatever text came after the last link', () => {
+		assert.deepEqual(names('- [A](https://a.com) [B](https://b.com)\n'), [['A'], ['B']]);
+		assert.deepEqual(names('- [A](https://a.com) x <https://b.com>\n'), [['A'], []]);
 	});
 
 	it('keeps code spans in a name, backticks and all', () => {
@@ -132,6 +130,8 @@ describe('parseMarkdown', () => {
 		const nested = (depth: number) => Array.from({ length: depth }, (_, i) => `${'  '.repeat(i)}- <https://a.com/${i}>\n`).join('');
 		assert.equal(parseMarkdown(DATED + nested(99)).length, 99);
 		assert.throws(() => parseMarkdown(DATED + nested(100)), ParseError);
+		assert.equal(parseMarkdown(DATED + '>'.repeat(199) + ' <https://a.com>\n').length, 1);
+		assert.throws(() => parseMarkdown(DATED + '>'.repeat(200) + ' <https://a.com>\n'), ParseError);
 		assert.throws(() => parseMarkdown(DATED + '>'.repeat(5000) + ' <https://a.com>\n'), ParseError);
 	});
 

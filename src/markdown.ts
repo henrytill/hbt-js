@@ -12,9 +12,9 @@ import { type Label, ParseError, type Time, type Url, mkEntity, mkLabel, mkName,
  * 2000 levels. At its limit it silently drops whatever is deeper, and
  * its `commonmark` preset's limit of 20 is only nine nested lists, so
  * this raises the limit well clear of any bookmark file and below any
- * engine's stack, and `parseMarkdown` refuses a document that reaches
- * it rather than returning part of one. hbt-rs has no limit, which
- * makes this the one depth at which the two differ.
+ * engine's stack, and `parseMarkdown` refuses a document that goes
+ * deeper rather than returning part of one. hbt-rs has no limit,
+ * which makes this the one depth at which the two differ.
  */
 const MAX_NESTING = 200;
 
@@ -32,15 +32,39 @@ const MAX_NESTING = 200;
  * and three others by default: hbt-rs records such a link like any
  * other.
  */
-const md = markdownIt.default('commonmark', { maxNesting: MAX_NESTING });
+const md = markdownIt.default('commonmark', { maxNesting: MAX_NESTING + 1 });
 md.normalizeLink = (url) => url;
 md.normalizeLinkText = (text) => text;
 md.validateLink = () => true;
 
+// markdown-it tries its block rules only below `maxNesting`, and at it
+// drops the rest of the container unread. One level short of that, a
+// rule ahead of the others sees exactly the blocks the limit would
+// lose, and refuses the document instead.
+md.block.ruler.before('table', 'hbt_max_nesting', (state) => {
+	if (state.level >= MAX_NESTING) {
+		throw new ParseError(`nesting deeper than ${MAX_NESTING} levels`);
+	}
+	return false;
+});
+
 /** Unicode's White_Space, which Rust's `char::is_whitespace` tests. */
 const WS = '[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*';
 
-const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const MONTHS = [
+	'january',
+	'february',
+	'march',
+	'april',
+	'may',
+	'june',
+	'july',
+	'august',
+	'september',
+	'october',
+	'november',
+	'december',
+];
 
 /**
  * chrono's `%B %-d, %Y`, as hbt-rs parses it: a month's full name or
@@ -48,11 +72,8 @@ const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', '
  * and a year of at most four digits, or of any length after a sign.
  * A space in the format matches any run of whitespace, none included.
  */
-const DATE = new RegExp(
-	'^(january|february|march|april|may|june|july|august|september|october|november|december|' +
-		`${MONTHS.join('|')})${WS}(\\d{1,2}),${WS}([+-]\\d+|\\d{1,4})$`,
-	'i',
-);
+const MONTH = [...MONTHS, ...MONTHS.map((m) => m.slice(0, 3))].join('|');
+const DATE = new RegExp(`^(${MONTH})${WS}(\\d{1,2}),${WS}([+-]\\d+|\\d{1,4})$`, 'i');
 
 /** The years chrono's `NaiveDate` holds. */
 const MIN_YEAR = -262143;
@@ -70,7 +91,7 @@ function parseDate(s: string): Time {
 	if (match === null) {
 		throw new ParseError(`date parsing error: ${s}`);
 	}
-	const month = MONTHS.indexOf(match[1]!.slice(0, 3).toLowerCase());
+	const month = MONTHS.findIndex((m) => m.startsWith(match[1]!.toLowerCase()));
 	const day = Number(match[2]);
 	const year = Number(match[3]);
 	const date = new Date(0);
@@ -83,11 +104,11 @@ function parseDate(s: string): Time {
 }
 
 /**
- * The kind of the construct most recently opened, which is what
- * decides whether a run of text is a date, a label, part of a name,
- * or nothing.
+ * What the construct most recently opened makes of a run of text: an
+ * H1's is a date, a lower heading's a label, an inline link's part of
+ * its name, and anything else's nothing.
  */
-type Current = 'heading' | 'link' | 'other';
+type Current = 'date' | 'label' | 'link' | 'other';
 
 /**
  * Reads a Markdown document into a collection.
@@ -129,7 +150,6 @@ export function parseMarkdown(input: string): Collection {
 	const collection = new Collection();
 
 	let current: Current = 'other';
-	let headingLevel = 1;
 	let date: Time | undefined;
 	let url: Url | undefined;
 	let nameParts: string[] = [];
@@ -166,30 +186,21 @@ export function parseMarkdown(input: string): Collection {
 	// so a pass over each level walks the document without recursion.
 	for (const block of md.parse(input, {})) {
 		const tokens: markdownIt.Token[] = block.type === 'inline' ? (block.children ?? []) : [block];
-		for (const [i, token] of tokens.entries()) {
-			// Whatever this opens may have lost its contents: at
-			// MAX_NESTING - 1, a paragraph inside would be the level
-			// markdown-it stops at. It is off by one only at the
-			// boundary, refusing a block quote there whose one
-			// paragraph did survive.
-			if (token.nesting === 1 && token.level >= MAX_NESTING - 1) {
-				throw new ParseError(`nesting deeper than ${MAX_NESTING} levels`);
-			}
+		for (let i = 0; i < tokens.length; i++) {
+			const token = tokens[i]!;
 			switch (token.type) {
 				case 'heading_open': {
 					const level = Number(token.tag.slice(1));
 					if (level === 1) {
 						date = undefined;
-						url = undefined;
-						nameParts = [];
 						labels = [];
 						maybeParent = undefined;
 						parents = [];
+						current = 'date';
 					} else {
 						labels.length = Math.min(labels.length, level - 2);
+						current = 'label';
 					}
-					headingLevel = level;
-					current = 'heading';
 					break;
 				}
 				case 'bullet_list_open':
@@ -207,18 +218,21 @@ export function parseMarkdown(input: string): Collection {
 				case 'link_open': {
 					const href = String(token.attrGet('href') ?? '');
 					current = 'other';
+					// It may not be empty: `current` outlives the link that
+					// set it, so text after one lands here too.
+					nameParts = [];
 					if (token.markup === 'autolink') {
 						// An email autolink's destination gains a `mailto:`
 						// that its text, the token after, lacks; hbt-rs
-						// saves one with no URL.
+						// saves one with no URL. Comparing the two relies
+						// on normalizeLink and normalizeLinkText both
+						// leaving a URI autolink as written.
 						if (tokens[i + 1]?.content === href) {
 							url = mkUrl(href);
 						}
-						nameParts = [];
 					} else if (token.meta?.label === undefined) {
 						// markdown-it gives only a reference link a label.
 						url = mkUrl(href);
-						nameParts = [];
 						current = 'link';
 					}
 					break;
@@ -234,12 +248,10 @@ export function parseMarkdown(input: string): Collection {
 					if (token.content === '') {
 						break;
 					}
-					if (current === 'heading') {
-						if (headingLevel === 1) {
-							date = parseDate(token.content);
-						} else {
-							labels.push(mkLabel(token.content));
-						}
+					if (current === 'date') {
+						date = parseDate(token.content);
+					} else if (current === 'label') {
+						labels.push(mkLabel(token.content));
 					} else if (current === 'link') {
 						nameParts.push(token.content);
 					}
