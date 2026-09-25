@@ -27,13 +27,23 @@ The tool reads bookmarks from Pinboard exports (JSON/XML), Netscape bookmark HTM
 
 The implementations share a wire format and a fixture corpus, so a semantic question - what merging two entities that share a timestamp should produce, say - gets settled once and pinned in [hbt-data](https://github.com/henrytill/hbt-data), then implemented in each. Issues are filed as companions across the repos; the discussion usually lives in whichever one hit it first. **hbt-rs's `AGENTS.md` carries the long form of the merge rules**, each with the issue that settled it; this file states what the code here does and does not restate the arguments.
 
+## Plan
+
+The order the rest is expected to land in, each step its own PR. It is provisional, not settled: revise it here when it changes, and mark a step done when it merges.
+
+1. **Markdown parser**, on [commonmark.js](https://github.com/commonmark/commonmark.js), with heading nesting becoming parent/child edges. About 20 fixtures; read `test/data/markdown/` before assuming the library fits every edge of it.
+2. **CLI shim** in `src/cli.ts`: arguments (`-t`, `--info`, the format from the extension) and file reading, kept out of the library. The harness calls `hbt -t yaml <input>`. `--version` belongs here too (see [Nix](#nix)).
+3. **Pinboard JSON, then Pinboard XML, then Netscape HTML.** Remove waivers as fixtures pass, as [Testing](#testing) describes.
+
+The HTML and XML parsers are written against the DOM API and take a `DOMParser` (see Core Principles). Which one the CLI supplies is open: [linkedom](https://github.com/WebReflection/linkedom) (lean) or [jsdom](https://github.com/jsdom/jsdom) (fidelity), chosen by running both against the fixtures. Netscape bookmark HTML is not well-formed XML (unclosed `<DT>` and `<p>`), so it needs a real HTML parser, and its fixtures are where the two are likeliest to differ from each other and from a browser. If injection proves awkward, the fallback is [parse5](https://github.com/inikulin/parse5) and [@xmldom/xmldom](https://github.com/xmldom/xmldom) imported by the library directly, which behave the same everywhere.
+
 ## Core Principles
 
 - **Typecheck early & often**: types are not only a correctness check, they guide the design. `tsconfig.json` turns on `strict`, plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `verbatimModuleSyntax`. Keep them on; `exactOptionalPropertyTypes` in particular is what makes "absent" and "present and `undefined`" different things, which the optional timestamps depend on.
 - **Branded types over bare primitives**: `Url`, `Name`, `Label`, `Extended` and `Time` are all `Brand<...>` aliases over `string` or `number`, so the checker catches field mix-ups the way hbt-rs's newtypes and hbt-go's named types do. Follow the pattern when adding a field. The brand is a `declare const brand: unique symbol`, so it exists only at the type level and costs nothing at runtime.
 - **Make illegal states unrepresentable**: where TypeScript cannot, constrain construction to one place. `mkEntity` is the only thing that builds an `Entity`; `mkName`, `mkLabel` and `mkExtended` are the only things that build their brands, and each refuses the empty string.
 - **The library runs in a browser too**: hbt-js starts as a CLI but is meant to run in a browser as well, so everything except `src/cli.ts` stays free of Node APIs (`fs`, `process`, `path`, `Buffer`). The library takes and returns strings; reading files, parsing arguments and choosing a format from an extension belong to the CLI. A parser that needs a platform facility, such as a `DOMParser` for HTML and XML, takes it as an argument, so the browser passes its own and the CLI supplies one.
-  - **Nothing enforces this yet, and the plan is for `tsc` to.** `@tsconfig/node24` gives every file Node's types, the library's included, so `process.env` in `src/entity.ts` typechecks. The browser bundle rejects an import of `fs`, but esbuild leaves a global like `process` or `Buffer` alone, so that would build and then crash in a browser. Adding `DOM` to `lib` would make this worse, not better: every file would see both platforms. The plan is one set of environment types per part instead, as a tsconfig per part linked by project references and built with `tsc -b`: the library with neither (`types: []`, no `DOM`); the CLI, the unit tests and the `.mjs` scripts with `node`; `test/browser/*.ts` with the DOM types it declares by hand. An injected facility is then a small interface the library declares, the way `test/browser/test.ts` declares `document`, which the native `DOMParser` and the CLI's alike satisfy. **Do this when the first parser lands**, since that is when the library first takes a platform facility; check first that TypeScript 7's `tsc -b` handles it.
+  - **Nothing enforces this yet, and the plan is for `tsc` to.** `@tsconfig/node24` gives every file Node's types, the library's included, so `process.env` in `src/entity.ts` typechecks. The browser bundle rejects an import of `fs`, but esbuild leaves a global like `process` or `Buffer` alone, so that would build and then crash in a browser. Adding `DOM` to `lib` would make this worse, not better: every file would see both platforms. The plan is one set of environment types per part instead, as a tsconfig per part linked by project references and built with `tsc -b`: the library with neither (`types: []`, no `DOM`); the CLI, the unit tests and the `.mjs` scripts with `node`; `test/browser/*.ts` with the DOM types it declares by hand. An injected facility is then a small interface the library declares, the way `test/browser/test.ts` declares `document`, which the native `DOMParser` and the CLI's alike satisfy. **Do this when the first parser that takes a platform facility lands** - Pinboard XML, in the [Plan](#plan)'s order, since the Markdown parser needs none; check first that TypeScript 7's `tsc -b` handles it.
 - **No recursion**: avoid recursive calls over user-provided data, which can nest arbitrarily deeply. The parsers in the other four all walk an explicit stack; the ones here should too when they land.
 
 ## Layout
@@ -101,6 +111,8 @@ node --test dist/tsc/src/entity.test.js      # one file, after a build
 
 They are the only thing actually covering this repo right now. Write them against the exported API rather than internals - `Id`'s owner is private precisely so that nothing, tests included, can reach around it.
 
+**Stay on `node:test` and `node:assert`.** Do not add a test framework; if the tests come to need something more featureful, raise it with the maintainer first.
+
 **The same unit tests in a browser.** `build.mjs` bundles them a second time for the browser, with `node:test` and `node:assert/strict` aliased to the stand-ins in `test/browser/`, and `test/browser/run.mjs` loads the page in headless Chromium (`--dump-dom`) and reads the report the stand-in writes into it. It needs no Nix: any Chromium or Chrome will do.
 
 ```sh
@@ -164,6 +176,8 @@ nix build -L         # the hbt package
 `self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/tsc/src/cli.js`. `src/cli.ts` starts with `#!/usr/bin/env node`, which `tsc` keeps, so the `hbt` that a plain `npm install` links runs too.
 
 **The CLI will need `--version` to report the revision.** The other four bake the commit into the binary and print it (`hbt 0.1.0 (7e16a14)` from hbt-rs, `hbt 0.1.0-21ebc53` from hbt-go); hbt-analysis's benchmark harness reads that to record which build produced a measurement, and a binary that answers `hbt` to every flag records nothing. hbt-rs does it with `HBT_COMMIT_HASH` from `self.shortRev or self.dirtyShortRev` in its flake - note that reading those is also what forces hbt-analysis to use `git+file:` inputs rather than `path:`, so adding it here has that consequence upstream.
+
+`nix build` prints `npm warn Unknown env config "nodedir"` a few times. It is benign and not this repo's: nixpkgs' `npmConfigHook` exports `npm_config_nodedir`, which npm does not recognize. npm plans to make unknown env configs an error in npm 13, which nixpkgs will not bundle before Node 27 at the earliest; recheck then, or if the build starts failing on it.
 
 A `github:` flake reference carries no submodules, so it lacks the `hbt-data` input and `nix flake check` fails on it; use `git+https://github.com/henrytill/hbt-js?submodules=1` or a checkout.
 
