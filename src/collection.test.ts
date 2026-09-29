@@ -131,4 +131,12 @@ describe('Collection', () => {
 		collection.updateLabels([[mkLabel('old'), mkLabel('new')]]);
 		assert.equal(collection.entity(id), before);
 	});
+
+	it('lists every label once, in code-point order', () => {
+		const collection = new Collection();
+		// U+FF5E sorts before U+1F600 by code point, after it by UTF-16 code unit.
+		collection.insert(mkEntity({ url: mkUrl('https://a.example/'), labels: new Set([mkLabel('b'), mkLabel('\u{1F600}')]) }));
+		collection.insert(mkEntity({ url: mkUrl('https://b.example/'), labels: new Set([mkLabel('\uFF5E'), mkLabel('b'), mkLabel('a')]) }));
+		assert.deepEqual(collection.labels(), ['a', 'b', '\uFF5E', '\u{1F600}']);
+	});
 });

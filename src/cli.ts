@@ -20,7 +20,7 @@ import * as yaml from 'yaml';
 import type { Collection } from './collection.js';
 import { type Label, mkLabel } from './entity.js';
 import { parseMarkdown } from './markdown.js';
-import { compareCodePoints, formatYaml } from './yaml.js';
+import { formatYaml } from './yaml.js';
 
 /** The `-f` values, shared by all five (henrytill/hbt-data#16). */
 const INPUT_FORMATS = ['json', 'xml', 'markdown', 'html'] as const;
@@ -98,33 +98,6 @@ function withContext<T>(message: string, f: () => T): T {
 	}
 }
 
-function parseArguments(args: string[]) {
-	const { values, positionals } = withUsage(() => util.parseArgs({ args, allowPositionals: true, options: OPTIONS }));
-	const [file, unexpected] = positionals;
-	if (unexpected !== undefined) {
-		throw new UsageError(`unexpected argument '${unexpected}' found`);
-	}
-	return {
-		from: choose(INPUT_FORMATS, 'from', once('from', values.from)),
-		to: choose(OUTPUT_FORMATS, 'to', once('to', values.to)),
-		output: once('output', values.output),
-		info: once('info', values.info) ?? false,
-		listTags: once('list-tags', values['list-tags']) ?? false,
-		mappings: once('mappings', values.mappings),
-		help: once('help', values.help) ?? false,
-		version: once('version', values.version) ?? false,
-		file,
-	};
-}
-
-/** The one value of an option, refusing a second. */
-function once<T>(option: Option, values: readonly T[] | undefined): T | undefined {
-	if (values !== undefined && values.length > 1) {
-		throw new UsageError(`the argument '${spelling(option)}' cannot be used multiple times`);
-	}
-	return values?.[0];
-}
-
 /** Runs `f`, turning the errors `util.parseArgs` throws into a `UsageError`. */
 function withUsage<T>(f: () => T): T {
 	try {
@@ -135,6 +108,33 @@ function withUsage<T>(f: () => T): T {
 		}
 		throw error;
 	}
+}
+
+function parseArguments(args: string[]) {
+	const { values, positionals } = withUsage(() => util.parseArgs({ args, allowPositionals: true, options: OPTIONS }));
+	const [file, unexpected] = positionals;
+	if (unexpected !== undefined) {
+		throw new UsageError(`unexpected argument '${unexpected}' found`);
+	}
+	return {
+		from: choose(INPUT_FORMATS, 'from', once('from', values.from)),
+		to: choose(OUTPUT_FORMATS, 'to', once('to', values.to)),
+		output: once('output', values.output),
+		info: once('info', values.info),
+		listTags: once('list-tags', values['list-tags']),
+		mappings: once('mappings', values.mappings),
+		help: once('help', values.help),
+		version: once('version', values.version),
+		file,
+	};
+}
+
+/** The one value of an option, refusing a second. */
+function once<T>(option: Option, values: readonly T[] | undefined): T | undefined {
+	if (values !== undefined && values.length > 1) {
+		throw new UsageError(`the argument '${spelling(option)}' cannot be used multiple times`);
+	}
+	return values?.[0];
 }
 
 function choose<T extends string>(choices: readonly T[], option: Option, value: string | undefined): T | undefined {
@@ -174,7 +174,9 @@ function parse(format: InputFormat, input: string): Collection {
 	switch (format) {
 		case 'markdown':
 			return parseMarkdown(input);
-		default:
+		case 'json':
+		case 'xml':
+		case 'html':
 			throw new Error(`there is no ${format} parser yet`);
 	}
 }
@@ -211,17 +213,6 @@ function readMappings(file: string): [Label, Label | null][] {
 		}
 		return [mkLabel(key), value === '' ? null : mkLabel(value)];
 	});
-}
-
-/** Every label in the collection, each once, in code-point order. */
-function labels(collection: Collection): string[] {
-	const labels = new Set<string>();
-	for (const entity of collection.entities()) {
-		for (const label of entity.labels) {
-			labels.add(label);
-		}
-	}
-	return [...labels].sort(compareCodePoints);
 }
 
 /**
@@ -272,7 +263,7 @@ function main(args: string[]): void {
 		return;
 	}
 	if (options.listTags) {
-		process.stdout.write(labels(collection).map((label) => `${label}\n`).join(''));
+		process.stdout.write(collection.labels().map((label) => `${label}\n`).join(''));
 		return;
 	}
 	const to = options.to ?? (options.output !== undefined ? detect(OUTPUT_EXTENSIONS, options.output) : undefined);
