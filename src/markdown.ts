@@ -15,6 +15,13 @@ import { type Label, ParseError, type Time, type Url, mkEntity, mkLabel, mkName,
  * this rather than returning part of one. The limit is well clear of
  * any bookmark file and below any engine's stack. hbt-rs has no
  * limit, which makes this the one depth at which the two differ.
+ *
+ * The inline parser recurses too, once per `[` it passes looking for
+ * the `]` that ends a link's text, and stops at the same depth. There
+ * it gives up on the link rather than refusing the document: the
+ * brackets need never close, so a run of them seldom holds a link at
+ * all. A link in or around a run nested this deep can be lost, which
+ * hbt-rs reads, and that is the other place the two differ.
  */
 const MAX_NESTING = 200;
 
@@ -50,6 +57,24 @@ md.block.ruler.before('table', 'hbt_max_nesting', (state) => {
 		throw new ParseError(`nesting deeper than ${MAX_NESTING} levels`);
 	}
 	return false;
+});
+
+// The inline parser tries its rules the same way, one level deeper for
+// each `[` it passes while it scans (`silent`) for the end of a link's
+// text. Past the cap, a rule ahead of the others ends the scan where
+// `maxNesting` would, at the end of the text, so the `[` it started
+// from opens no link. Only a scan goes this deep, since a link cannot
+// hold another; if anything else did, losing its text silently would
+// be worse than refusing the document.
+md.inline.ruler.before('text', 'hbt_max_nesting', (state, silent) => {
+	if (state.level < MAX_NESTING) {
+		return false;
+	}
+	if (!silent) {
+		throw new ParseError(`nesting deeper than ${MAX_NESTING} levels`);
+	}
+	state.pos = state.posMax;
+	return true;
 });
 
 /** Unicode's White_Space, which Rust's `char::is_whitespace` tests. */

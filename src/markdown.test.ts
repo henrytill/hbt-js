@@ -156,6 +156,18 @@ describe('parseMarkdown', () => {
 		assert.throws(() => parseMarkdown(DATED + '> - '.repeat(67) + '<https://a.com>\n'), ParseError);
 	});
 
+	it('gives up on a link whose text nests brackets past its limit, where hbt-rs reads it', () => {
+		const nested = (depth: number) => '['.repeat(depth) + 'x' + ']'.repeat(depth) + '(https://a.com)\n';
+		assert.equal(parseMarkdown(DATED + nested(199)).length, 1);
+		assert.equal(parseMarkdown(DATED + nested(200)).length, 0);
+		assert.equal(parseMarkdown(DATED + nested(20000)).length, 0);
+	});
+
+	it('reads past brackets that never close, however many', () => {
+		assert.equal(parseMarkdown(DATED + '[x '.repeat(20000) + '<https://a.com>\n').length, 1);
+		assert.equal(parseMarkdown(DATED + '!['.repeat(20000) + '[B](https://b.com)\n').length, 1);
+	});
+
 	it('reads dates as chrono reads `%B %-d, %Y`', () => {
 		const createdAt = (date: string) => summary(parseMarkdown(`# ${date}\n\n- <https://a.com>\n`))[0]?.createdAt;
 		assert.equal(createdAt('November 15, 2023'), NOV_15);
