@@ -108,6 +108,44 @@ function parseDate(s: string): Time {
 }
 
 /**
+ * Whether the link whose content is on top of `rest`, the walk's
+ * stack, holds an inline link in an image's alt text.
+ *
+ * CommonMark forbids a link inside a link, so pulldown-cmark reads the
+ * outer one's brackets as text. markdown-it enforces that only for a
+ * link written directly in the text, and takes the outer one as a
+ * link when the inner is in an image. An autolink does not count:
+ * CommonMark lets a link hold one, and both parsers agree.
+ */
+function holdsLink(rest: readonly markdownIt.Token[]): boolean {
+	const images: markdownIt.Token[] = [];
+	let depth = 0;
+	for (let i = rest.length - 1; i >= 0; i--) {
+		const token = rest[i]!;
+		if (token.type === 'link_open') {
+			depth++;
+		} else if (token.type === 'link_close') {
+			if (depth === 0) {
+				break;
+			}
+			depth--;
+		} else if (token.type === 'image') {
+			images.push(token);
+		}
+	}
+	for (let image = images.pop(); image !== undefined; image = images.pop()) {
+		for (const child of image.children ?? []) {
+			if (child.type === 'link_open' && child.markup !== 'autolink') {
+				return true;
+			} else if (child.type === 'image') {
+				images.push(child);
+			}
+		}
+	}
+	return false;
+}
+
+/**
  * What the construct most recently opened makes of a run of text: an
  * H1's is a date, a lower heading's a label, an inline link's part of
  * its name, and anything else's nothing.
@@ -161,6 +199,8 @@ export function parseMarkdown(input: string): Collection {
 	// The last bookmark made, which a list opened next nests under.
 	let maybeParent: Id | undefined;
 	let parents: Id[] = [];
+	// Whether each link open is one that pulldown-cmark reads as text.
+	const textLinks: boolean[] = [];
 
 	const save = (): void => {
 		if (url === undefined) {
@@ -186,95 +226,118 @@ export function parseMarkdown(input: string): Collection {
 		maybeParent = id;
 	};
 
-	// Inline tokens hold their children in a flat array of their own,
-	// so a pass over each level walks the document without recursion.
-	for (const block of md.parse(input, {})) {
-		const tokens: markdownIt.Token[] = block.type === 'inline' ? (block.children ?? []) : [block];
-		for (let i = 0; i < tokens.length; i++) {
-			const token = tokens[i]!;
-			switch (token.type) {
-				case 'heading_open': {
-					const level = Number(token.tag.slice(1));
-					if (level === 1) {
-						date = undefined;
-						labels = [];
-						maybeParent = undefined;
-						parents = [];
-						current = 'date';
-					} else {
-						labels.length = Math.min(labels.length, level - 2);
-						current = 'label';
-					}
-					break;
-				}
-				case 'bullet_list_open':
-				case 'ordered_list_open':
-					current = 'other';
-					if (maybeParent !== undefined) {
-						parents.push(maybeParent);
-					}
-					break;
-				case 'bullet_list_close':
-				case 'ordered_list_close':
-					parents.pop();
+	const readText = (content: string): void => {
+		if (current === 'date') {
+			date = parseDate(content);
+		} else if (current === 'label') {
+			labels.push(mkLabel(content));
+		} else if (current === 'link') {
+			nameParts.push(content);
+		}
+	};
+
+	// The tokens still to visit, the next on top. A token's children
+	// follow it: an inline token holds the tokens of a paragraph or a
+	// heading, and an image those of its alt text, which may hold images
+	// in turn. Pushing each token's children as it is reached walks them
+	// all in document order without recursion.
+	const pending = md.parse(input, {}).reverse();
+	for (let token = pending.pop(); token !== undefined; token = pending.pop()) {
+		switch (token.type) {
+			case 'heading_open': {
+				const level = Number(token.tag.slice(1));
+				if (level === 1) {
+					date = undefined;
+					labels = [];
 					maybeParent = undefined;
-					break;
-				case 'link_open': {
-					const href = String(token.attrGet('href') ?? '');
-					current = 'other';
-					// It may not be empty: `current` outlives the link that
-					// set it, so text after one lands here too.
-					nameParts = [];
-					if (token.markup === 'autolink') {
-						// An email autolink's destination gains a `mailto:`
-						// that its text, the token after, lacks; hbt-rs
-						// saves one with no URL. Comparing the two relies
-						// on normalizeLink and normalizeLinkText both
-						// leaving a URI autolink as written.
-						if (tokens[i + 1]?.content === href) {
-							url = mkUrl(href);
-						}
-					} else if (token.meta?.label === undefined) {
-						// markdown-it gives only a reference link a label.
-						url = mkUrl(href);
-						current = 'link';
-					}
+					parents = [];
+					current = 'date';
+				} else {
+					labels.length = Math.min(labels.length, level - 2);
+					current = 'label';
+				}
+				break;
+			}
+			case 'bullet_list_open':
+			case 'ordered_list_open':
+				current = 'other';
+				if (maybeParent !== undefined) {
+					parents.push(maybeParent);
+				}
+				break;
+			case 'bullet_list_close':
+			case 'ordered_list_close':
+				parents.pop();
+				maybeParent = undefined;
+				break;
+			case 'link_open': {
+				textLinks.push(holdsLink(pending));
+				if (textLinks.at(-1)!) {
+					// pulldown-cmark's text here is the `[` alone, which
+					// hbt-rs takes as a label under a heading. What it
+					// makes of the `](...)` at the close does not
+					// matter: the inner link has opened since, so no
+					// heading's text can follow.
+					readText('[');
 					break;
 				}
-				case 'link_close':
-					save();
-					break;
-				case 'text':
-					// markdown-it leaves an empty text token beside an
-					// emphasis delimiter; pulldown-cmark emits nothing
-					// there, so `## **Foo**` is no label rather than an
-					// empty one.
-					if (token.content === '') {
-						break;
+				const href = String(token.attrGet('href') ?? '');
+				current = 'other';
+				// It may not be empty: `current` outlives the link that
+				// set it, so text after one lands here too.
+				nameParts = [];
+				if (token.markup === 'autolink') {
+					// An email autolink's destination gains a `mailto:`
+					// that its text, the token after, lacks; hbt-rs
+					// saves one with no URL. Comparing the two relies
+					// on normalizeLink and normalizeLinkText both
+					// leaving a URI autolink as written.
+					if (pending.at(-1)?.content === href) {
+						url = mkUrl(href);
 					}
-					if (current === 'date') {
-						date = parseDate(token.content);
-					} else if (current === 'label') {
-						labels.push(mkLabel(token.content));
-					} else if (current === 'link') {
-						nameParts.push(token.content);
-					}
-					break;
-				case 'code_inline':
-					if (current === 'link') {
-						nameParts.push(`\`${token.content}\``);
-					}
-					break;
-				case 'image':
-					// pulldown-cmark opens an image as it does a link, so
-					// the text after one is not the link's.
-					current = 'other';
-					break;
-				default:
-					if (token.nesting === 1) {
-						current = 'other';
-					}
+				} else if (token.meta?.label === undefined) {
+					// markdown-it gives only a reference link a label.
+					url = mkUrl(href);
+					current = 'link';
+				}
+				break;
 			}
+			case 'link_close':
+				if (!textLinks.pop()) {
+					save();
+				}
+				break;
+			case 'text':
+				// markdown-it leaves an empty text token beside an
+				// emphasis delimiter; pulldown-cmark emits nothing
+				// there, so `## **Foo**` is no label rather than an
+				// empty one.
+				if (token.content !== '') {
+					readText(token.content);
+				}
+				break;
+			case 'code_inline':
+				if (current === 'link') {
+					nameParts.push(`\`${token.content}\``);
+				}
+				break;
+			case 'image':
+				// pulldown-cmark opens an image as it does a link, so
+				// the text after one is not the link's, and reports
+				// the links in its alt text, its children here, like
+				// any other, which hbt-rs records (#23). Nothing marks
+				// its end here, and hbt-rs ignores pulldown-cmark's, so
+				// what the alt text last opened still holds.
+				current = 'other';
+				break;
+			default:
+				if (token.nesting === 1) {
+					current = 'other';
+				}
+		}
+		const children = token.children ?? [];
+		for (let i = children.length - 1; i >= 0; i--) {
+			pending.push(children[i]!);
 		}
 	}
 

@@ -96,6 +96,23 @@ describe('parseMarkdown', () => {
 		assert.deepEqual(names('- [![i](https://i.com) after](https://foo.com)\n'), [[]]);
 	});
 
+	it('reads the links in the alt text of an image, as hbt-rs does', () => {
+		assert.deepEqual(names('- ![a [B](https://b.com) c](https://i.com)\n'), [['B']]);
+		assert.deepEqual(names('![x ![a [B](https://b.com) c](https://i.com) y](https://j.com)\n'), [['B']]);
+		assert.deepEqual(edges('- ![a [B](https://b.com)](https://i.com)\n  - <https://c.com>\n'), [[1], [0]]);
+	});
+
+	it('reads a link around an image holding a link as text, as CommonMark does', () => {
+		assert.deepEqual(names('[![a [B](https://b.com) c](https://i.com)](https://foo.com)\n'), [['B']]);
+		assert.deepEqual(names('[x <https://a.com> ![[B](https://b.com)](https://i.com)](https://foo.com)\n'), [[], ['B']]);
+		assert.deepEqual(labels('## x [![[B](https://b.com)](https://i.com)](https://foo.com)\n\n- <https://z.com>\n'), [['[', 'x '], [
+			'[',
+			'x ',
+		]]);
+		assert.throws(() => parseMarkdown(DATED + '[![[B][r]](https://i.com)](https://foo.com)\n\n[r]: https://r.com\n'), ParseError);
+		assert.throws(() => parseMarkdown(DATED + '[<https://a.com>](https://foo.com)\n'), ParseError);
+	});
+
 	it('joins the pieces of a line broken inside a name', () => {
 		assert.deepEqual(names('[A\nB](https://foo.com)\n'), [['AB']]);
 	});
