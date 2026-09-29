@@ -33,6 +33,15 @@
           npmDeps = pkgs.importNpmLock { inherit npmRoot; };
 
           npmConfigHook = pkgs.importNpmLock.npmConfigHook;
+
+          # The commit `hbt --version` prints, from the variable hbt-rs's
+          # flake bakes in. Reading self's revision is what makes a
+          # `path:` reference to this flake fail to evaluate, as it does
+          # for hbt-rs.
+          postInstall = ''
+            wrapProgram $out/bin/hbt \
+              --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
+          '';
         };
       in
       {
