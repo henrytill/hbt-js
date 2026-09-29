@@ -123,4 +123,35 @@ describe('hbt', () => {
 		assert.equal(hbt('--no-such-flag', INPUT).status, 2);
 		assert.equal(hbt('-t', 'yaml', INPUT, INPUT).status, 2);
 	});
+
+	// clap refuses a repeated option in hbt-rs, where util.parseArgs
+	// would keep the last value.
+	it('refuses an option given twice, a flag included', () => {
+		assert.deepEqual(hbt('-t', 'yaml', '-t', 'html', INPUT), {
+			status: 2,
+			stdout: '',
+			stderr: "error: the argument '-t, --to <TO>' cannot be used multiple times\n",
+		});
+		assert.equal(hbt('--info', '--info', INPUT).status, 2);
+		assert.equal(hbt('-f', 'markdown', '--from=markdown', '--info', INPUT).status, 2);
+	});
+
+	it('lists every option in its help', () => {
+		const { status, stdout } = hbt('--help');
+		assert.equal(status, 0);
+		for (
+			const option of [
+				'-f, --from <FROM>',
+				'-t, --to <TO>',
+				'-o, --output <OUTPUT>',
+				'--info',
+				'--list-tags',
+				'--mappings <FILE>',
+				'-h, --help',
+				'-V, --version',
+			]
+		) {
+			assert.ok(stdout.includes(`  ${option}  `), option);
+		}
+	});
 });

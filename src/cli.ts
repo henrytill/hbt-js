@@ -6,6 +6,9 @@
 // The flags, messages and exit codes follow hbt-rs's `cli/src/main.rs`:
 // a usage error exits 2, as clap's do, and any other error exits 1,
 // printed as anyhow prints one, with the error's causes beneath it.
+// A usage error says more than hbt-rs's does, whose clap is built
+// without its `error-context` feature and so names only the kind of
+// mistake, `error: unexpected argument found`.
 // `--schema` is left out, as hbt-go leaves it out: the schema is
 // generated from hbt-rs's types and hbt-data carries the result.
 import * as fs from 'node:fs';
@@ -30,25 +33,56 @@ type OutputFormat = (typeof OUTPUT_FORMATS)[number];
 const INPUT_EXTENSIONS = new Map<string, InputFormat>([['json', 'json'], ['xml', 'xml'], ['md', 'markdown'], ['html', 'html']]);
 const OUTPUT_EXTENSIONS = new Map<string, OutputFormat>([['html', 'html'], ['yaml', 'yaml'], ['yml', 'yaml']]);
 
-const USAGE = 'Usage: hbt [OPTIONS] [FILE]';
+/**
+ * Every option may be given only once, as in hbt-rs, where clap
+ * refuses a second `-t` or even a second `--info`. `util.parseArgs`
+ * would keep the last value silently, so each is parsed as `multiple`
+ * and `once` refuses a repeat.
+ */
+const OPTIONS = {
+	from: { type: 'string', short: 'f', multiple: true },
+	to: { type: 'string', short: 't', multiple: true },
+	output: { type: 'string', short: 'o', multiple: true },
+	info: { type: 'boolean', multiple: true },
+	'list-tags': { type: 'boolean', multiple: true },
+	mappings: { type: 'string', multiple: true },
+	help: { type: 'boolean', short: 'h', multiple: true },
+	version: { type: 'boolean', short: 'V', multiple: true },
+} as const satisfies util.ParseArgsOptionsConfig;
 
-const HELP = `Heterogeneous Bookmark Transformation
+type Option = keyof typeof OPTIONS;
 
-${USAGE}
+/** Each option's value name and description, which the type requires for every option. */
+const DESCRIPTIONS: { readonly [K in Option]: readonly [value: string, text: string] } = {
+	from: ['<FROM>', `Input format [possible values: ${INPUT_FORMATS.join(', ')}]`],
+	to: ['<TO>', `Output format [possible values: ${OUTPUT_FORMATS.join(', ')}]`],
+	output: ['<OUTPUT>', 'Output file (defaults to stdout)'],
+	info: ['', 'Show collection info (entity count)'],
+	'list-tags': ['', 'List all tags'],
+	mappings: ['<FILE>', 'Read mappings from <FILE>'],
+	help: ['', 'Print help'],
+	version: ['', 'Print version'],
+};
 
-Arguments:
-  [FILE]  Input file
+/** An option as its help line names it, `-t, --to <TO>`. */
+function spelling(option: Option): string {
+	const short = 'short' in OPTIONS[option] ? `-${OPTIONS[option].short}, ` : '    ';
+	const [value] = DESCRIPTIONS[option];
+	return `${short}--${option}${value && ` ${value}`}`;
+}
 
-Options:
-  -f, --from <FROM>        Input format [possible values: ${INPUT_FORMATS.join(', ')}]
-  -t, --to <TO>            Output format [possible values: ${OUTPUT_FORMATS.join(', ')}]
-  -o, --output <OUTPUT>    Output file (defaults to stdout)
-      --info               Show collection info (entity count)
-      --list-tags          List all tags
-      --mappings <FILE>    Read mappings from <FILE>
-  -h, --help               Print help
-  -V, --version            Print version
-`;
+const HELP = [
+	'Heterogeneous Bookmark Transformation',
+	'',
+	'Usage: hbt [OPTIONS] [FILE]',
+	'',
+	'Arguments:',
+	'  [FILE]  Input file',
+	'',
+	'Options:',
+	...(Object.keys(OPTIONS) as Option[]).map((option) => `  ${spelling(option).padEnd(23)}  ${DESCRIPTIONS[option][1]}`),
+	'',
+].join('\n');
 
 /** An error in the arguments themselves, which exits 2. */
 class UsageError extends Error {
@@ -65,32 +99,30 @@ function withContext<T>(message: string, f: () => T): T {
 }
 
 function parseArguments(args: string[]) {
-	const { values, positionals } = withUsage(() =>
-		util.parseArgs({
-			args,
-			allowPositionals: true,
-			options: {
-				from: { type: 'string', short: 'f' },
-				to: { type: 'string', short: 't' },
-				output: { type: 'string', short: 'o' },
-				info: { type: 'boolean' },
-				'list-tags': { type: 'boolean' },
-				mappings: { type: 'string' },
-				help: { type: 'boolean', short: 'h' },
-				version: { type: 'boolean', short: 'V' },
-			},
-		})
-	);
+	const { values, positionals } = withUsage(() => util.parseArgs({ args, allowPositionals: true, options: OPTIONS }));
 	const [file, unexpected] = positionals;
 	if (unexpected !== undefined) {
 		throw new UsageError(`unexpected argument '${unexpected}' found`);
 	}
 	return {
-		...values,
-		from: choose(INPUT_FORMATS, values.from, '--from <FROM>'),
-		to: choose(OUTPUT_FORMATS, values.to, '--to <TO>'),
+		from: choose(INPUT_FORMATS, 'from', once('from', values.from)),
+		to: choose(OUTPUT_FORMATS, 'to', once('to', values.to)),
+		output: once('output', values.output),
+		info: once('info', values.info) ?? false,
+		listTags: once('list-tags', values['list-tags']) ?? false,
+		mappings: once('mappings', values.mappings),
+		help: once('help', values.help) ?? false,
+		version: once('version', values.version) ?? false,
 		file,
 	};
+}
+
+/** The one value of an option, refusing a second. */
+function once<T>(option: Option, values: readonly T[] | undefined): T | undefined {
+	if (values !== undefined && values.length > 1) {
+		throw new UsageError(`the argument '${spelling(option)}' cannot be used multiple times`);
+	}
+	return values?.[0];
 }
 
 /** Runs `f`, turning the errors `util.parseArgs` throws into a `UsageError`. */
@@ -105,11 +137,11 @@ function withUsage<T>(f: () => T): T {
 	}
 }
 
-function choose<T extends string>(choices: readonly T[], value: string | undefined, flag: string): T | undefined {
+function choose<T extends string>(choices: readonly T[], option: Option, value: string | undefined): T | undefined {
 	if (value === undefined || (choices as readonly string[]).includes(value)) {
 		return value as T | undefined;
 	}
-	throw new UsageError(`invalid value '${value}' for '${flag}'\n  [possible values: ${choices.join(', ')}]`);
+	throw new UsageError(`invalid value '${value}' for '${spelling(option)}' [possible values: ${choices.join(', ')}]`);
 }
 
 /** The format a file's extension names, if it names one. */
@@ -239,7 +271,7 @@ function main(args: string[]): void {
 		process.stdout.write(`${file}: ${collection.length} entities\n`);
 		return;
 	}
-	if (options['list-tags']) {
+	if (options.listTags) {
 		process.stdout.write(labels(collection).map((label) => `${label}\n`).join(''));
 		return;
 	}
@@ -272,7 +304,7 @@ try {
 	main(process.argv.slice(2));
 } catch (error) {
 	if (error instanceof UsageError) {
-		process.stderr.write(`error: ${error.message}\n\n${USAGE}\n\nFor more information, try '--help'.\n`);
+		process.stderr.write(`error: ${error.message}\n`);
 		process.exitCode = 2;
 	} else {
 		process.stderr.write(report(error));
