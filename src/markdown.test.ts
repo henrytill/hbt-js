@@ -133,6 +133,10 @@ describe('parseMarkdown', () => {
 		assert.equal(parseMarkdown(DATED + '>'.repeat(199) + ' <https://a.com>\n').length, 1);
 		assert.throws(() => parseMarkdown(DATED + '>'.repeat(200) + ' <https://a.com>\n'), ParseError);
 		assert.throws(() => parseMarkdown(DATED + '>'.repeat(5000) + ' <https://a.com>\n'), ParseError);
+		// A list opens two levels at once, so alternating it with a block
+		// quote reaches odd levels, and 67 of each steps from 199 to 201.
+		assert.equal(parseMarkdown(DATED + '> - '.repeat(66) + '<https://a.com>\n').length, 1);
+		assert.throws(() => parseMarkdown(DATED + '> - '.repeat(67) + '<https://a.com>\n'), ParseError);
 	});
 
 	it('reads dates as chrono reads `%B %-d, %Y`', () => {

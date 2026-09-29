@@ -9,12 +9,12 @@ import { type Label, ParseError, type Time, type Url, mkEntity, mkLabel, mkName,
  *
  * markdown-it's block parser recurses once per level, so it must stop
  * somewhere; unbounded, it overflows node's stack between 1000 and
- * 2000 levels. At its limit it silently drops whatever is deeper, and
- * its `commonmark` preset's limit of 20 is only nine nested lists, so
- * this raises the limit well clear of any bookmark file and below any
- * engine's stack, and `parseMarkdown` refuses a document that goes
- * deeper rather than returning part of one. hbt-rs has no limit,
- * which makes this the one depth at which the two differ.
+ * 2000 levels. Its own limit, `maxNesting`, silently drops whatever
+ * is deeper, so it is set out of reach and a rule of ours stops it
+ * instead: `parseMarkdown` refuses a document that goes deeper than
+ * this rather than returning part of one. The limit is well clear of
+ * any bookmark file and below any engine's stack. hbt-rs has no
+ * limit, which makes this the one depth at which the two differ.
  */
 const MAX_NESTING = 200;
 
@@ -33,15 +33,18 @@ const MAX_NESTING = 200;
  * and three others by default: hbt-rs records such a link like any
  * other.
  */
-const md = markdownIt.default('commonmark', { maxNesting: MAX_NESTING + 1 });
+const md = markdownIt.default('commonmark', { maxNesting: Infinity });
 md.normalizeLink = (url) => url;
 md.normalizeLinkText = (text) => text;
 md.validateLink = () => true;
 
-// markdown-it tries its block rules only below `maxNesting`, and at it
-// drops the rest of the container unread. One level short of that, a
-// rule ahead of the others sees exactly the blocks the limit would
-// lose, and refuses the document instead.
+// markdown-it tries every block rule, in order, before reading a block
+// at any level, so a rule ahead of the others sees each level the
+// moment there is something to read at it, and refuses the document
+// from `MAX_NESTING` on. It depends on no bound of `maxNesting`'s: a
+// list opens with its first item, so the level can rise by two in one
+// step, and a `maxNesting` one above the guard let that step land
+// past it and drop the content unread (#22).
 md.block.ruler.before('table', 'hbt_max_nesting', (state) => {
 	if (state.level >= MAX_NESTING) {
 		throw new ParseError(`nesting deeper than ${MAX_NESTING} levels`);
