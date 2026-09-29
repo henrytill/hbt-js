@@ -26,7 +26,7 @@ const DOCUMENT = `# November 15, 2023
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hbt-cli-'));
 
 /** Writes `contents` to a file named `name` in the scratch directory. */
-function scratch(name: string, contents: string): string {
+function scratch(name: string, contents: string | Uint8Array): string {
 	const file = path.join(dir, name);
 	fs.writeFileSync(file, contents);
 	return file;
@@ -34,10 +34,12 @@ function scratch(name: string, contents: string): string {
 
 const INPUT = scratch('input.md', DOCUMENT);
 
-function hbt(...args: string[]) {
-	const { status, stdout, stderr } = child_process.spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8' });
+function run(env: NodeJS.ProcessEnv, ...args: string[]) {
+	const { status, stdout, stderr } = child_process.spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', env });
 	return { status, stdout, stderr };
 }
+
+const hbt = (...args: string[]) => run(process.env, ...args);
 
 const ok = (stdout: string) => ({ status: 0, stdout, stderr: '' });
 const failure = (stderr: string) => ({ status: 1, stdout: '', stderr });
@@ -69,10 +71,7 @@ describe('hbt', () => {
 
 	it('prints the version, with the commit when the build gives one', () => {
 		assert.match(hbt('--version').stdout, /^hbt \d+\.\d+\.\d+\n$/);
-		const { status, stdout } = child_process.spawnSync(process.execPath, [CLI, '-V'], {
-			encoding: 'utf8',
-			env: { ...process.env, HBT_COMMIT_SHORT_HASH: '7e16a14' },
-		});
+		const { status, stdout } = run({ ...process.env, HBT_COMMIT_SHORT_HASH: '7e16a14' }, '-V');
 		assert.equal(status, 0);
 		assert.match(stdout, /^hbt \d+\.\d+\.\d+ \(7e16a14\)\n$/);
 	});
@@ -83,15 +82,15 @@ describe('hbt', () => {
 	});
 
 	it('refuses malformed UTF-8 rather than replacing it', () => {
-		const input = scratch('malformed.md', '');
-		fs.writeFileSync(input, new Uint8Array([0xff]));
+		const input = scratch('malformed.md', new Uint8Array([0xff]));
 		assert.equal(hbt('-t', 'yaml', input).status, 1);
 	});
 
 	it('names a missing input file', () => {
-		const { status, stderr } = hbt('-t', 'yaml', path.join(dir, 'missing.md'));
+		const missing = path.join(dir, 'missing.md');
+		const { status, stderr } = hbt('-t', 'yaml', missing);
 		assert.equal(status, 1);
-		assert.ok(stderr.startsWith(`Error: Could not open input file: ${path.join(dir, 'missing.md')}\n\nCaused by:\n`), stderr);
+		assert.ok(stderr.startsWith(`Error: Could not open input file: ${missing}\n\nCaused by:\n`), stderr);
 	});
 
 	it('requires an input file', () => {

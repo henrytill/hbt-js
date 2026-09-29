@@ -1,4 +1,4 @@
-import { type Entity, type Label, type Url, mkEntity, entityMerge } from './entity.js';
+import { type Entity, type Label, type Url, compareCodePoints, mkEntity, entityMerge } from './entity.js';
 
 /**
  * A handle on one node, valid only for the collection that issued it.
@@ -148,6 +148,17 @@ export class Collection {
 	 */
 	entities(): readonly Entity[] {
 		return [...this.#nodes];
+	}
+
+	/** Every label on any node, each once, in code-point order. */
+	labels(): Label[] {
+		const labels = new Set<Label>();
+		for (const node of this.#nodes) {
+			for (const label of node.labels) {
+				labels.add(label);
+			}
+		}
+		return [...labels].sort(compareCodePoints);
 	}
 
 	/**
