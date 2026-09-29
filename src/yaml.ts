@@ -16,7 +16,7 @@ const VERSION = '0.1.0';
  * differing pair of units is compared with the surrogates moved above
  * U+FFFF, the fixup ICU's `u_strCompare` uses in code-point order.
  */
-function compareCodePoints(a: string, b: string): number {
+export function compareCodePoints(a: string, b: string): number {
 	const n = Math.min(a.length, b.length);
 	for (let i = 0; i < n; i++) {
 		let x = a.charCodeAt(i);

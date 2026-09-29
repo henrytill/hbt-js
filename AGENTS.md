@@ -8,7 +8,7 @@
 
 **Run `npm run fmt` before every commit** - dprint is not a CI check, so a misformatted file lands silently and churns the next diff
 
-**Every fixture is waived** - the CLI is still a stub, so conformance reports `xfail` across the board and says nothing about the library (see [Testing](#testing))
+**Every fixture without a parser is waived** - the Markdown fixtures pass; the HTML and Pinboard ones report `xfail` until their parsers land (see [Testing](#testing))
 
 **Fixtures live in a submodule shared with four other implementations** - changing one is a cross-language decision (see [Testing](#testing))
 
@@ -23,7 +23,7 @@ A TypeScript implementation of hbt, a bookmark and document collection tool, dev
 
 The tool reads bookmarks from Pinboard exports (JSON/XML), Netscape bookmark HTML, and Markdown, merges them into a collection keyed by URL, and writes the result as YAML or HTML.
 
-**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested, and so are the YAML formatter and the Markdown parser. Nothing else is: there are no other parsers, no HTML formatter, and no CLI. `src/cli.ts` prints `hbt`, and `bin/hbt` points at its compiled form - it ignores every flag, `--version` included, and exits 0. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
+**This is the newest and least finished of the five.** The data model - `Entity`, `Collection`, and the merge - is written and tested, and so are the YAML formatter, the Markdown parser and the CLI. Nothing else is: there are no other parsers and no HTML formatter, so `hbt` reads only Markdown and writes only YAML, and refuses the rest with an error. Read any statement about parsers or formats below as describing what the other four do and what this one is being built toward.
 
 The implementations share a wire format and a fixture corpus, so a semantic question - what merging two entities that share a timestamp should produce, say - gets settled once and pinned in [hbt-data](https://github.com/henrytill/hbt-data), then implemented in each. Issues are filed as companions across the repos; the discussion usually lives in whichever one hit it first. **hbt-rs's `AGENTS.md` carries the long form of the merge rules**, each with the issue that settled it; this file states what the code here does and does not restate the arguments.
 
@@ -31,8 +31,8 @@ The implementations share a wire format and a fixture corpus, so a semantic ques
 
 The order the rest is expected to land in, each step its own PR. It is provisional, not settled: revise it here when it changes, and mark a step done when it merges.
 
-1. **Markdown parser**, on [markdown-it](https://github.com/markdown-it/markdown-it) rather than the [commonmark.js](https://github.com/commonmark/commonmark.js) first planned. **Done**: `src/markdown.ts`, which passes all 25 fixtures, though conformance cannot show it until the CLI lands.
-2. **CLI shim** in `src/cli.ts`: arguments (`-t`, `--info`, the format from the extension) and file reading, kept out of the library. The harness calls `hbt -t yaml <input>`. `--version` belongs here too (see [Nix](#nix)).
+1. **Markdown parser**, on [markdown-it](https://github.com/markdown-it/markdown-it) rather than the [commonmark.js](https://github.com/commonmark/commonmark.js) first planned. **Done**: `src/markdown.ts`, which passes all 25 fixtures.
+2. **CLI** in `src/cli.ts`: arguments, file reading and `--version`, kept out of the library. **Done**, with hbt-rs's flags and messages (see [below](#clits)).
 3. **Pinboard JSON, then Pinboard XML, then Netscape HTML.** Remove waivers as fixtures pass, as [Testing](#testing) describes.
 
 The HTML and XML parsers are written against the DOM API and take a `DOMParser` (see Core Principles). Which one the CLI supplies is open: [linkedom](https://github.com/WebReflection/linkedom) (lean) or [jsdom](https://github.com/jsdom/jsdom) (fidelity), chosen by running both against the fixtures. Netscape bookmark HTML is not well-formed XML (unclosed `<DT>` and `<p>`), so it needs a real HTML parser, and its fixtures are where the two are likeliest to differ from each other and from a browser. If injection proves awkward, the fallback is [parse5](https://github.com/inikulin/parse5) and [@xmldom/xmldom](https://github.com/xmldom/xmldom) imported by the library directly, which behave the same everywhere.
@@ -58,7 +58,7 @@ A single npm package, ESM (`"type": "module"`), built from `src/` to `dist/` twi
 | `src/yaml.ts`         | `formatYaml` - a `Collection` as `collection.schema.json` describes it                                              |
 | `src/markdown.ts`     | `parseMarkdown` - a Markdown document as a `Collection`                                                             |
 | `src/index.ts`        | The library's entry point: re-exports each module above as a namespace (`entity`, `collection`, `yaml`, `markdown`) |
-| `src/cli.ts`          | The CLI entry point, and the only module that may use Node APIs. Currently a stub                                   |
+| `src/cli.ts`          | The CLI entry point, and the only module that may use Node APIs                                                     |
 | `src/*.test.ts`       | Unit tests, beside the code they cover                                                                              |
 | `test/browser/`       | Stand-ins for `node:test` and `node:assert/strict`, the test page, and `run.mjs`, which runs it                     |
 | `test/data/`          | The [hbt-data](https://github.com/henrytill/hbt-data) submodule: corpus, conformance harness, flake                 |
@@ -112,7 +112,17 @@ Checked beyond the unit tests by rebuilding a `Collection` from every `*.expecte
 - **Nesting is capped at 200 of markdown-it's levels**, 99 nested lists. Unbounded, its recursion overflows node's stack between 1000 and 2000 levels; at its own limit, `maxNesting`, it silently drops the deeper content, so that is set out of reach and a rule first in its block chain throws instead. Past the cap, `parseMarkdown` throws. hbt-rs has no limit.
 - **A link's text is capped at the same depth**, counted in `[`s passed looking for its end, but there a rule first in the inline chain gives up on the link, as `maxNesting` would, rather than refusing the document: the brackets need never close, and a paragraph full of them seldom holds a link. A link in or around a run nested that deep can be lost, where hbt-rs reads it - markdown-it caches the give-up by position, so a later scan through it gives up too - which is a second difference from hbt-rs.
 
-Checked beyond the unit tests by running the corpus's Markdown fixtures through the harness with a scratch shim (all 25 pass), and by a differential fuzz against hbt-rs's binary over generated documents, which agreed on every one but those hitting the two differences above.
+Checked beyond the unit tests by the corpus's 25 Markdown fixtures, which conformance runs, and by a differential fuzz against hbt-rs's binary over generated documents, which agreed on every one but those hitting the two differences above.
+
+### `cli.ts`
+
+`main` reads the arguments with `node:util`'s `parseArgs`, reads and decodes the file, and hands the string to the library.
+
+- **Its surface is hbt-rs's**: `-f`/`--from`, `-t`/`--to`, `-o`/`--output`, `--info`, `--list-tags`, `--mappings`, `-h` and `-V`, with the same messages, the same short-circuit order (`--info`, then `--list-tags`, then `-t` or `-o`'s extension) and the same exit codes - 2 for a usage error, as clap gives, and 1 for any other, printed as anyhow prints one, with its causes beneath. `hbt-rs/cli/tests/cli.rs` is the reference, and `src/cli.test.ts` covers the same cases. `--schema` is left out, as hbt-go leaves it out: the schema is generated from hbt-rs's types. The `-f` names are henrytill/hbt-data#16's (`markdown`, not `md`).
+- **A format with no parser or formatter yet is accepted and then refused**: `-f json` is a valid argument that fails with `there is no json parser yet`, exit 1, not a usage error, so the vocabulary does not change as the parsers land.
+- **It decodes UTF-8 strictly and keeps a byte-order mark**, as Rust's `read_to_string` does, rather than replacing a malformed sequence as `readFileSync(..., 'utf8')` would.
+- **A mappings value of the empty string drops the label** (henrytill/hbt-go#73); any value that is not a string is an error, as in hbt-rs. The file is read as YAML with `mapAsMap`, so that a key of `42` is refused rather than turned into `'42'`.
+- **The version is read from `package.json` at run time**, three directories up from `dist/tsc/src/cli.js`, which holds in the checkout and in the installed package alike. The commit comes from the environment; see [Nix](#nix).
 
 ## Testing
 
@@ -136,7 +146,7 @@ npm run test:browser                                  # build, then run under `c
 CHROMIUM=/path/to/chrome npm run test:browser         # any other Chromium or Chrome binary
 ```
 
-This is the run that shows the library behaves the same in both places, which matters most once a parser takes an injected `DOMParser`: node's tests get the CLI's, the browser's get the native one. The stand-ins implement only what the tests use - `describe`, `it`, and `ok`/`equal`/`notEqual`/`deepEqual`/`throws` with strict semantics. **A test that reaches for more (`before`, `mock`, `assert.match`) fails only in the browser** until the stand-in grows it; `deepEqual` throws on a built-in it does not know rather than calling two of them equal.
+`src/cli.test.ts` is the exception: it spawns the built CLI, so `build.mjs` leaves it out of the browser bundle. This is the run that shows the library behaves the same in both places, which matters most once a parser takes an injected `DOMParser`: node's tests get the CLI's, the browser's get the native one. The stand-ins implement only what the tests use - `describe`, `it`, and `ok`/`equal`/`notEqual`/`deepEqual`/`throws` with strict semantics. **A test that reaches for more (`before`, `mock`, `assert.match`) fails only in the browser** until the stand-in grows it; `deepEqual` throws on a built-in it does not know rather than calling two of them equal.
 
 **Source maps.** `tsc` and esbuild both write one beside every output, but node reads them only under `--enable-source-maps`. `npm test` passes it, so a failure's stack names the line in `src/*.test.ts` rather than in the compiled output. The browser report prints only each error's message, and `bin/hbt` does not pass the flag.
 
@@ -150,11 +160,11 @@ This is the run that shows the library behaves the same in both places, which ma
 nix build -L .#checks.x86_64-linux.conformance    # or just nix flake check -L
 ```
 
-**`conformance.waivers` at the repo root waives every fixture**, with the reason `stub`. The harness reports each as `XFAIL` and the check passes. This is the mechanism that lets a stub sit in the matrix rather than being excluded from it, and it is self-clearing: once a parser lands, the fixtures it satisfies report **`XPASS`**, which _fails_ the run until the waiver is removed. So the way to land a parser is to write it, watch conformance go red with `XPASS`, and delete those lines from `conformance.waivers` in the same commit. Do not pre-emptively remove waivers for work not yet done.
+**`conformance.waivers` at the repo root waives every fixture whose parser is not written yet** - the HTML and Pinboard ones - with the reason `stub`. The harness reports each as `XFAIL` and the check passes. This is the mechanism that lets a partial implementation sit in the matrix rather than being excluded from it, and it is self-clearing: once a parser lands, the fixtures it satisfies report **`XPASS`**, which _fails_ the run until the waiver is removed. So the way to land a parser is to write it, watch conformance go red with `XPASS`, and delete those lines from `conformance.waivers` in the same commit. Do not pre-emptively remove waivers for work not yet done.
 
 Three further rules about that file, each learned the expensive way:
 
-- **A waiver's reason names the issue that removes it.** `stub` is the exception this repo gets while there is no CLI at all; a waiver added later should read `markdown/superseded_created_at # henrytill/hbt-js#N`.
+- **A waiver's reason names the issue that removes it.** `stub` is the exception this repo gets for a format with no parser at all; a waiver added later should read `markdown/superseded_created_at # henrytill/hbt-js#N`.
 - **A stale waiver fails the run**, "stale" meaning it names a fixture this corpus does not have - it does not merely warn. So a waiver and the `test/data` bump that brings in the fixture it waives **must be one commit**: the waiver is stale before the bump and the fixture fails after it, so neither is landable alone.
 - **A corpus error is not waivable.** A malformed expectation file is hbt-data's failure, not this implementation's, and no waiver lets it ride along at exit 0.
 
@@ -191,7 +201,7 @@ nix build -L         # the hbt package
 
 `self.submodules = true` is set, so flake builds see `test/data/`. The package is a `buildNpmPackage` using `importNpmLock`; `bin/hbt` in the result is a generated wrapper that invokes node on `dist/tsc/src/cli.js`. `src/cli.ts` starts with `#!/usr/bin/env node`, which `tsc` keeps, so the `hbt` that a plain `npm install` links runs too.
 
-**The CLI will need `--version` to report the revision.** The other four bake the commit into the binary and print it (`hbt 0.1.0 (7e16a14)` from hbt-rs, `hbt 0.1.0-21ebc53` from hbt-go); hbt-analysis's benchmark harness reads that to record which build produced a measurement, and a binary that answers `hbt` to every flag records nothing. hbt-rs does it with `HBT_COMMIT_HASH` from `self.shortRev or self.dirtyShortRev` in its flake - note that reading those is also what forces hbt-analysis to use `git+file:` inputs rather than `path:`, so adding it here has that consequence upstream.
+**`--version` reports the revision**, as the other four do (`hbt 0.1.0 (7e16a14)` from hbt-rs, `hbt 0.1.0-21ebc53` from hbt-go); hbt-analysis's benchmark harness reads it to record which build produced a measurement. The package's `postInstall` wraps `bin/hbt` to set `HBT_COMMIT_SHORT_HASH` from `self.shortRev or self.dirtyShortRev`, the variable hbt-rs's flake bakes in, and the CLI prints it after the version from `package.json`, in hbt-rs's form. Reading `self`'s revision is also what forces hbt-analysis to use `git+file:` inputs rather than `path:`: a `path:` reference to this flake has no revision and fails to evaluate. Outside Nix nothing sets the variable, and `--version` prints the version alone.
 
 `nix build` prints `npm warn Unknown env config "nodedir"` a few times. It is benign and not this repo's: nixpkgs' `npmConfigHook` exports `npm_config_nodedir`, which npm does not recognize. npm plans to make unknown env configs an error in npm 13, which nixpkgs will not bundle before Node 27 at the earliest; recheck then, or if the build starts failing on it.
 
