@@ -1,7 +1,8 @@
 import * as yaml from 'yaml';
 
 import type { Collection } from './collection.js';
-import { type Entity, compareCodePoints } from './entity.js';
+import type { Entity } from './entity.js';
+import { compareCodePoints } from './order.js';
 
 /** The serialization format's version, which a reader checks against `^0.1.0`. */
 const VERSION = '0.1.0';
