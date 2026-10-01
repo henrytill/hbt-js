@@ -161,7 +161,7 @@ function version(): string {
 	// build puts this file. A JSON import would make tsc copy
 	// package.json into dist/tsc/, which the published files leave out.
 	const { version } = module.createRequire(import.meta.url)('hbt/package.json') as { version: string };
-	const commit = process.env.HBT_COMMIT_SHORT_HASH;
+	const commit = process.env['HBT_COMMIT_SHORT_HASH'];
 	return commit ? `${version} (${commit})` : version;
 }
 

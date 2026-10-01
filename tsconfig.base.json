@@ -6,6 +6,11 @@
 	// into the same dist/tsc from the same root, so the output layout is
 	// the one a single project gave: the library and the CLI in
 	// dist/tsc/src.
+	//
+	// The checks come from @tsconfig/strictest, which sets checks alone
+	// and no environment, so it sits under this one without contention.
+	"extends": "@tsconfig/strictest/tsconfig.json",
+
 	"compilerOptions": {
 		// ES2025, a published edition, rather than esnext, which moves
 		// under the code. Node 24 implements all of it, so the library
@@ -26,16 +31,9 @@
 		"declaration": true,
 		"sourceMap": true,
 
-		// Stricter Typechecking Options
-		"noUncheckedIndexedAccess": true,
-		"exactOptionalPropertyTypes": true,
-
-		// Recommended Options
-		"strict": true,
+		// What strictest leaves out.
 		"verbatimModuleSyntax": true,
-		"isolatedModules": true,
 		"noUncheckedSideEffectImports": true,
-		"moduleDetection": "force",
-		"skipLibCheck": true
+		"moduleDetection": "force"
 	}
 }
