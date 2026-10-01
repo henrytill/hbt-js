@@ -12,6 +12,7 @@
 // `--schema` is left out, as hbt-go leaves it out: the schema is
 // generated from hbt-rs's types and hbt-data carries the result.
 import * as fs from 'node:fs';
+import * as module from 'node:module';
 import * as path from 'node:path';
 import * as util from 'node:util';
 
@@ -155,10 +156,11 @@ const detect = <T>(formats: ReadonlyMap<string, T>, file: string): T | undefined
  * produced a measurement.
  */
 function version(): string {
-	// This file runs as dist/tsc/src/cli.js, in the checkout and in the
-	// installed package alike.
-	const url = new URL('../../../package.json', import.meta.url);
-	const { version } = JSON.parse(fs.readFileSync(url, 'utf8')) as { version: string };
+	// By the package's own name, which node resolves through `exports`
+	// wherever the package is, so this does not depend on where the
+	// build puts this file. A JSON import would make tsc copy
+	// package.json into dist/tsc/, which the published files leave out.
+	const { version } = module.createRequire(import.meta.url)('hbt/package.json') as { version: string };
 	const commit = process.env.HBT_COMMIT_SHORT_HASH;
 	return commit ? `${version} (${commit})` : version;
 }

@@ -10,7 +10,8 @@
 		".": {
 			"types": "./dist/tsc/src/index.d.ts",
 			"default": "./dist/tsc/src/index.js"
-		}
+		},
+		"./package.json": "./package.json"
 	},
 	"files": [
 		"dist/tsc/src",

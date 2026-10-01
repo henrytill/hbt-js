@@ -123,7 +123,7 @@ Checked beyond the unit tests by the corpus's 25 Markdown fixtures, which confor
 - **A format with no parser or formatter yet is accepted and then refused**: `-f json` is a valid argument that fails with `there is no json parser yet`, exit 1, not a usage error, so the vocabulary does not change as the parsers land.
 - **It decodes UTF-8 strictly and keeps a byte-order mark**, as Rust's `read_to_string` does, rather than replacing a malformed sequence as `readFileSync(..., 'utf8')` would.
 - **A mappings value of the empty string drops the label** (henrytill/hbt-go#73); any value that is not a string is an error, as in hbt-rs. The file is read as YAML with `mapAsMap`, so that a key of `42` is refused rather than turned into `'42'`.
-- **The version is read from `package.json` at run time**, three directories up from `dist/tsc/src/cli.js`, which holds in the checkout and in the installed package alike. The commit comes from the environment; see [Nix](#nix).
+- **The version is read from `package.json` at run time**, by the package's own name (`hbt/package.json`, which `exports` lists), so it does not depend on where the build puts `cli.js`. Node has no constant for it: `npm_package_version` is set only under `npm run`, and a JSON import would make `tsc` copy `package.json` into `dist/tsc/`, outside `files`. The commit comes from the environment; see [Nix](#nix).
 
 ## Testing
 
