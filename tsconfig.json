@@ -1,17 +1,6 @@
 {
-	// A solution file: it builds nothing itself, only the projects it
-	// references, with `tsc -b`. They are split by environment, so that
-	// each part sees only the platform it runs on:
-	//
-	//   tsconfig.lib.json      the library: no Node, no DOM
-	//   tsconfig.cli.json      the CLI: Node
-	//   tsconfig.test.json     the unit tests: Node
-	//   tsconfig.browser.json  the browser test harness: what it declares
-	//   tsconfig.scripts.json  build.mjs and run.mjs: Node
-	//
-	// tsc writes everything that runs under node - the library and the
-	// CLI - unbundled; esbuild writes only the browser outputs (see
-	// build.mjs).
+	// A solution file: `tsc -b` builds the projects it references, one
+	// per environment, each named in its own header.
 	"files": [],
 	"references": [
 		{ "path": "./tsconfig.lib.json" },

@@ -11,10 +11,8 @@ import * as esbuild from 'esbuild';
 
 /** @type {esbuild.BuildOptions} */
 const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
-// The CLI's tests spawn it, so they run under node alone. Nothing in
-// the tsconfig projects marks them out: tsconfig.test.json holds every
-// unit test, since all of them import node:test, so the name is the
-// boundary here.
+// The CLI's tests spawn it, so they run under node alone; the name is
+// the one tsconfig.test.json excludes, for tsconfig.cli.json to type.
 const tests = fs.globSync('src/**/*.test.ts').filter((t) => t !== 'src/cli.test.ts');
 const browserEntry = [
 	`import * as test from './test/browser/test.ts';`,

@@ -1,14 +1,22 @@
 {
-	// The unit tests, beside the code they cover. They import node:test
-	// and node:assert/strict, so they get Node's types, even though all
-	// but cli.test.ts run in a browser too, against the stand-ins in
-	// test/browser. cli.test.ts spawns the built CLI rather than
-	// importing it; the reference to the CLI is there so that it is
-	// built first.
-	"extends": ["./tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
+	// The unit tests that run in a browser as well as under node, beside
+	// the code they cover. They are typed against the stand-ins in
+	// test/browser, as build.mjs aliases them for the browser, so a test
+	// reaching for what a stand-in lacks fails here rather than only in
+	// the browser; the emitted imports stay node:test and
+	// node:assert/strict, so node runs the real ones. cli.test.ts spawns
+	// the CLI under node alone, so it is the CLI project's.
+	"extends": "./tsconfig.base.json",
 	"include": ["src/**/*.test.ts"],
+	"exclude": ["src/cli.test.ts"],
 	"references": [
 		{ "path": "./tsconfig.lib.json" },
-		{ "path": "./tsconfig.cli.json" }
-	]
+		{ "path": "./tsconfig.browser.json" }
+	],
+	"compilerOptions": {
+		"paths": {
+			"node:test": ["./test/browser/test.ts"],
+			"node:assert/strict": ["./test/browser/assert.ts"]
+		}
+	}
 }

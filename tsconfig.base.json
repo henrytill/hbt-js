@@ -28,12 +28,10 @@
 		"rootDir": ".",
 		"outDir": "./dist/tsc",
 		"composite": true,
-		"declaration": true,
 		"sourceMap": true,
 
-		// What strictest leaves out.
-		"verbatimModuleSyntax": true,
-		"noUncheckedSideEffectImports": true,
-		"moduleDetection": "force"
+		// What strictest leaves out; noUncheckedSideEffectImports and
+		// moduleDetection "force" are TypeScript 7's defaults.
+		"verbatimModuleSyntax": true
 	}
 }
