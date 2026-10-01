@@ -50,7 +50,7 @@
 	},
 	"dependencies": {
 		"markdown-it": "^15.0.2",
-		"whatwg-url": "^15.1.0",
+		"whatwg-url": "^17.1.1",
 		"yaml": "^2.9.1"
 	}
 }
