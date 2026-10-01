@@ -6,10 +6,9 @@
 	// argument, typed by an interface of its own.
 	"extends": "../tsconfig.base.json",
 	"include": ["."],
-	"exclude": ["cli.ts", "**/*.test.ts"],
 	"compilerOptions": {
 		// Out of dist/tsc/src, which is published, where tsc -b would
 		// otherwise put it, beside this file's outputs.
-		"tsBuildInfoFile": "../dist/tsc/tsconfig.lib.tsbuildinfo"
+		"tsBuildInfoFile": "../dist/tsc/tsconfig.src.tsbuildinfo"
 	}
 }

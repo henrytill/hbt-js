@@ -3,9 +3,11 @@
 	// per environment, each named in its own header.
 	"files": [],
 	"references": [
-		{ "path": "./src/tsconfig.json" },
-		{ "path": "./src/tsconfig.test.json" },
-		{ "path": "./test/browser/tsconfig.json" },
-		{ "path": "./tsconfig.node.json" }
+		{ "path": "./src" },
+		{ "path": "./cli" },
+		{ "path": "./test/unit" },
+		{ "path": "./test/cli" },
+		{ "path": "./test/browser" },
+		{ "path": "./tsconfig.scripts.json" }
 	]
 }

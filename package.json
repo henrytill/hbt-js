@@ -4,7 +4,7 @@
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
 	"bin": {
-		"hbt": "dist/tsc/src/cli.js"
+		"hbt": "dist/tsc/cli/cli.js"
 	},
 	"exports": {
 		".": "./dist/tsc/src/index.js",
@@ -12,7 +12,7 @@
 	},
 	"files": [
 		"dist/tsc/src",
-		"!dist/tsc/src/**/*.test.*"
+		"dist/tsc/cli"
 	],
 	"scripts": {
 		"clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
@@ -20,7 +20,7 @@
 		"build": "node build.mjs",
 		"fmt": "dprint fmt",
 		"pretest": "npm run build",
-		"test": "node --enable-source-maps --test 'dist/tsc/src/**/*.test.js'",
+		"test": "node --enable-source-maps --test 'dist/tsc/test/**/*.test.js'",
 		"pretest:browser": "npm run build",
 		"test:browser": "node test/browser/run.mjs"
 	},

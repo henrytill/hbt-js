@@ -3,9 +3,9 @@ import { describe, it } from 'node:test';
 
 import * as yaml from 'yaml';
 
-import { Collection } from './collection.js';
-import { mkEntity, mkExtended, mkLabel, mkName, mkTime, mkUrl } from './entity.js';
-import { formatYaml } from './yaml.js';
+import { Collection } from '../../src/collection.js';
+import { mkEntity, mkExtended, mkLabel, mkName, mkTime, mkUrl } from '../../src/entity.js';
+import { formatYaml } from '../../src/yaml.js';
 
 // Read back as YAML 1.1, as the conformance harness's PyYAML does.
 const readBack = (collection: Collection): any => yaml.parse(formatYaml(collection), { version: '1.1' });

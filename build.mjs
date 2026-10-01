@@ -11,10 +11,8 @@ import * as esbuild from 'esbuild';
 
 /** @type {esbuild.BuildOptions} */
 const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
-// The CLI's tests spawn it, so they run under node alone; the name is
-// the one src/tsconfig.test.json excludes, for tsconfig.node.json to
-// type.
-const tests = fs.globSync('src/**/*.test.ts').filter((t) => t !== 'src/cli.test.ts');
+// Not test/cli: the CLI's test spawns it, so it runs under node alone.
+const tests = fs.globSync('test/unit/**/*.test.ts');
 const browserEntry = [
 	`import * as test from './test/browser/test.ts';`,
 	'test.run(() => {',
