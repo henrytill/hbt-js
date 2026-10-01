@@ -6,7 +6,7 @@
 		{ "path": "./tsconfig.lib.json" },
 		{ "path": "./tsconfig.cli.json" },
 		{ "path": "./tsconfig.test.json" },
-		{ "path": "./tsconfig.browser.json" },
+		{ "path": "./tsconfig.shims.json" },
 		{ "path": "./tsconfig.scripts.json" }
 	]
 }
