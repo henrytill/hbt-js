@@ -1,0 +1,6 @@
+{
+	// The CLI's test, which spawns the built CLI rather than importing
+	// it, so it runs under node alone and gets Node's types.
+	"extends": ["../../tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
+	"include": ["."]
+}

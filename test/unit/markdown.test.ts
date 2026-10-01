@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { Collection } from './collection.js';
-import { ParseError } from './entity.js';
-import { parseMarkdown } from './markdown.js';
+import type { Collection } from '../../src/collection.js';
+import { ParseError } from '../../src/entity.js';
+import { parseMarkdown } from '../../src/markdown.js';
 
 /** Each node as plain data, its sets sorted, in insertion order. */
 const summary = (collection: Collection) =>

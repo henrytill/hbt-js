@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { Collection, Id } from './collection.js';
-import { mkEntity, mkLabel, mkTime, mkUrl } from './entity.js';
+import { Collection, Id } from '../../src/collection.js';
+import { mkEntity, mkLabel, mkTime, mkUrl } from '../../src/entity.js';
 
 const a = mkEntity({ url: mkUrl('https://a.example/') });
 const b = mkEntity({ url: mkUrl('https://b.example/') });

@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { type EntityInit, ParseError, mkEntity, entityEquals, entityMerge, mkExtended, mkLabel, mkName, mkTime, mkUrl } from './entity.js';
+import {
+	type EntityInit,
+	ParseError,
+	mkEntity,
+	entityEquals,
+	entityMerge,
+	mkExtended,
+	mkLabel,
+	mkName,
+	mkTime,
+	mkUrl,
+} from '../../src/entity.js';
 
 const testUrl = mkUrl('https://example.com/');
 

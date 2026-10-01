@@ -18,10 +18,10 @@ import * as util from 'node:util';
 
 import * as yaml from 'yaml';
 
-import type { Collection } from './collection.js';
-import { type Label, mkLabel } from './entity.js';
-import { parseMarkdown } from './markdown.js';
-import { formatYaml } from './yaml.js';
+import type { Collection } from '../src/collection.js';
+import { type Label, mkLabel } from '../src/entity.js';
+import { parseMarkdown } from '../src/markdown.js';
+import { formatYaml } from '../src/yaml.js';
 
 /** The `-f` values, shared by all five (henrytill/hbt-data#16). */
 const INPUT_FORMATS = ['json', 'xml', 'markdown', 'html'] as const;

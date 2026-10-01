@@ -1,7 +1,7 @@
 // The CLI as a process, after hbt-rs's cli/tests/cli.rs: what the
 // conformance harness does not reach, which is every flag but `-t` and
-// every failure. Node only, so build.mjs leaves it out of the browser
-// run.
+// every failure. Node only, so it is not in test/unit, which the
+// browser run bundles.
 import assert from 'node:assert/strict';
 import * as child_process from 'node:child_process';
 import * as fs from 'node:fs';
@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 import * as url from 'node:url';
 
-const CLI = url.fileURLToPath(new URL('./cli.js', import.meta.url));
+const CLI = url.fileURLToPath(new URL('../../cli/cli.js', import.meta.url));
 
 const DOCUMENT = `# November 15, 2023
 
