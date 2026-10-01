@@ -1,4 +1,5 @@
-import { type Entity, type Label, type Url, compareCodePoints, mkEntity, entityMerge } from './entity.js';
+import { type Entity, type Label, type Url, mkEntity, entityMerge } from './entity.js';
+import { compareCodePoints } from './order.js';
 
 /**
  * A handle on one node, valid only for the collection that issued it.
