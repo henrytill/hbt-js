@@ -7,10 +7,7 @@
 		"hbt": "dist/tsc/src/cli.js"
 	},
 	"exports": {
-		".": {
-			"types": "./dist/tsc/src/index.d.ts",
-			"default": "./dist/tsc/src/index.js"
-		},
+		".": "./dist/tsc/src/index.js",
 		"./package.json": "./package.json"
 	},
 	"files": [
