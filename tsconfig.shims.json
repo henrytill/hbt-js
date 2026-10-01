@@ -1,9 +1,0 @@
-{
-	// The stand-ins for node:test and node:assert/strict in test/browser:
-	// the unit tests are typed against them, build.mjs bundles them in
-	// place of the real modules, and run.mjs formats the report with
-	// test.ts. The base's environment, without lib "dom" - test.ts
-	// declares the few browser globals it uses by hand.
-	"extends": "./tsconfig.base.json",
-	"include": ["test/browser/*.ts"]
-}

@@ -5,18 +5,20 @@
 	// reaching for what a stand-in lacks fails here rather than only in
 	// the browser; the emitted imports stay node:test and
 	// node:assert/strict, so node runs the real ones. cli.test.ts spawns
-	// the CLI under node alone, so it is the CLI project's.
-	"extends": "./tsconfig.base.json",
-	"include": ["src/**/*.test.ts"],
-	"exclude": ["src/cli.test.ts"],
+	// the CLI under node alone, so it is tsconfig.node.json's.
+	"extends": "../tsconfig.base.json",
+	"include": ["**/*.test.ts"],
+	"exclude": ["cli.test.ts"],
 	"references": [
-		{ "path": "./tsconfig.lib.json" },
-		{ "path": "./tsconfig.shims.json" }
+		{ "path": "./tsconfig.json" },
+		{ "path": "../test/browser/tsconfig.json" }
 	],
 	"compilerOptions": {
+		// As in tsconfig.json beside this.
+		"tsBuildInfoFile": "../dist/tsc/tsconfig.test.tsbuildinfo",
 		"paths": {
-			"node:test": ["./test/browser/test.ts"],
-			"node:assert/strict": ["./test/browser/assert.ts"]
+			"node:test": ["../test/browser/test.ts"],
+			"node:assert/strict": ["../test/browser/assert.ts"]
 		}
 	}
 }

@@ -1,0 +1,18 @@
+{
+	// Everything that runs under node alone: the CLI and its test, the
+	// only modules in src that may use Node APIs, and the plain scripts,
+	// each starting with `// @ts-check`. run.mjs imports
+	// test/browser/test.ts, which node runs by stripping its types;
+	// rewriteRelativeImportExtensions lets tsc accept the import.
+	"extends": ["./tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
+	"files": ["src/cli.ts", "src/cli.test.ts", "build.mjs"],
+	"include": ["test/browser/*.mjs"],
+	"references": [
+		{ "path": "./src/tsconfig.json" },
+		{ "path": "./test/browser/tsconfig.json" }
+	],
+	"compilerOptions": {
+		"allowJs": true,
+		"rewriteRelativeImportExtensions": true
+	}
+}
