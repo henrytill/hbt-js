@@ -1,0 +1,14 @@
+{
+	// The unit tests, beside the code they cover. They import node:test
+	// and node:assert/strict, so they get Node's types, even though all
+	// but cli.test.ts run in a browser too, against the stand-ins in
+	// test/browser. cli.test.ts spawns the built CLI rather than
+	// importing it; the reference to the CLI is there so that it is
+	// built first.
+	"extends": ["./tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
+	"include": ["src/**/*.test.ts"],
+	"references": [
+		{ "path": "./tsconfig.lib.json" },
+		{ "path": "./tsconfig.cli.json" }
+	]
+}

@@ -1,51 +1,23 @@
 {
-	// Visit https://aka.ms/tsconfig to read more about this file
-	"extends": "@tsconfig/node24/tsconfig.json",
-
-	"include": ["src", "test/browser", "build.mjs"],
-
-	"compilerOptions": {
-		// tsc writes everything that runs under node - the library and
-		// the CLI - unbundled; esbuild writes only the browser outputs
-		// (see build.mjs).
-		// The root is "." because test/browser is typechecked too, so
-		// the library lands in dist/tsc/src.
-		"rootDir": ".",
-		"outDir": "./dist/tsc",
-		"declaration": true,
-		"sourceMap": true,
-		"allowJs": true,
-		"rewriteRelativeImportExtensions": true,
-
-		// Environment Settings
-		// See also https://aka.ms/tsconfig/module
-		// "module": "nodenext",
-		// "target": "esnext",
-		// "types": [],
-		// For nodejs:
-		// "lib": ["esnext"],
-		// "types": ["node"],
-		// and npm install -D @types/node
-
-		// Stricter Typechecking Options
-		"noUncheckedIndexedAccess": true,
-		"exactOptionalPropertyTypes": true,
-
-		// Style Options
-		// "noImplicitReturns": true,
-		// "noImplicitOverride": true,
-		// "noUnusedLocals": true,
-		// "noUnusedParameters": true,
-		// "noFallthroughCasesInSwitch": true,
-		// "noPropertyAccessFromIndexSignature": true,
-
-		// Recommended Options
-		"strict": true,
-		// "jsx": "react-jsx",
-		"verbatimModuleSyntax": true,
-		"isolatedModules": true,
-		"noUncheckedSideEffectImports": true,
-		"moduleDetection": "force",
-		"skipLibCheck": true
-	}
+	// A solution file: it builds nothing itself, only the projects it
+	// references, with `tsc -b`. They are split by environment, so that
+	// each part sees only the platform it runs on:
+	//
+	//   tsconfig.lib.json      the library: no Node, no DOM
+	//   tsconfig.cli.json      the CLI: Node
+	//   tsconfig.test.json     the unit tests: Node
+	//   tsconfig.browser.json  the browser test harness: what it declares
+	//   tsconfig.scripts.json  build.mjs and run.mjs: Node
+	//
+	// tsc writes everything that runs under node - the library and the
+	// CLI - unbundled; esbuild writes only the browser outputs (see
+	// build.mjs).
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.lib.json" },
+		{ "path": "./tsconfig.cli.json" },
+		{ "path": "./tsconfig.test.json" },
+		{ "path": "./tsconfig.browser.json" },
+		{ "path": "./tsconfig.scripts.json" }
+	]
 }
