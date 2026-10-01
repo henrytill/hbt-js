@@ -15,7 +15,8 @@
 		"!dist/tsc/src/**/*.test.*"
 	],
 	"scripts": {
-		"prebuild": "tsc",
+		"clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+		"prebuild": "tsc -b",
 		"build": "node build.mjs",
 		"fmt": "dprint fmt",
 		"pretest": "npm run build",

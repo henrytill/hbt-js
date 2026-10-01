@@ -1,0 +1,10 @@
+{
+	// The library, which runs in a browser as well as under node, so it
+	// keeps the base's environment - ECMAScript, neither platform's
+	// types: a module that reaches for `process`, `Buffer` or `document`
+	// fails here. A facility it needs from the platform it takes as an
+	// argument, typed by an interface of its own.
+	"extends": "./tsconfig.base.json",
+	"include": ["src"],
+	"exclude": ["src/cli.ts", "src/**/*.test.ts"]
+}

@@ -1,0 +1,41 @@
+{
+	// What every project shares (see tsconfig.json), and as it stands the
+	// library's environment: ECMAScript and nothing else. The projects
+	// that run under node extend @tsconfig/node24 after this, which
+	// overrides the environment and leaves the rest. Each project writes
+	// into the same dist/tsc from the same root, so the output layout is
+	// the one a single project gave: the library and the CLI in
+	// dist/tsc/src.
+	"compilerOptions": {
+		// ES2025, a published edition, rather than esnext, which moves
+		// under the code. Node 24 implements all of it, so the library
+		// runs under the CLI, and so do current browsers.
+		"target": "es2025",
+		"lib": ["es2025"],
+		"types": [],
+		// How the package is loaded, not what platform it runs on: node
+		// runs dist/tsc as it is, and a bundler reads the same files, so
+		// imports must resolve as node resolves them.
+		"module": "nodenext",
+
+		// The root is "." because test/browser is built too, so the
+		// library lands in dist/tsc/src.
+		"rootDir": ".",
+		"outDir": "./dist/tsc",
+		"composite": true,
+		"declaration": true,
+		"sourceMap": true,
+
+		// Stricter Typechecking Options
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+
+		// Recommended Options
+		"strict": true,
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		"noUncheckedSideEffectImports": true,
+		"moduleDetection": "force",
+		"skipLibCheck": true
+	}
+}

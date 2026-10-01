@@ -1,0 +1,6 @@
+{
+	// The CLI, the only module in src that may use Node APIs.
+	"extends": ["./tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
+	"files": ["src/cli.ts"],
+	"references": [{ "path": "./tsconfig.lib.json" }]
+}
