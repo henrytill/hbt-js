@@ -320,7 +320,7 @@ export function parseMarkdown(input: string): Collection {
 					if (pending.at(-1)?.content === href) {
 						url = mkUrl(href);
 					}
-				} else if (token.meta?.label === undefined) {
+				} else if (token.meta?.['label'] === undefined) {
 					// markdown-it gives only a reference link a label.
 					url = mkUrl(href);
 					current = 'link';
