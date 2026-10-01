@@ -11,7 +11,7 @@
 	"exclude": ["src/cli.test.ts"],
 	"references": [
 		{ "path": "./tsconfig.lib.json" },
-		{ "path": "./tsconfig.browser.json" }
+		{ "path": "./tsconfig.shims.json" }
 	],
 	"compilerOptions": {
 		"paths": {

@@ -1,7 +1,0 @@
-{
-	// The browser test harness: the stand-ins for node:test and
-	// node:assert/strict. The base's environment, without lib "dom" -
-	// test.ts declares the few browser globals it uses by hand.
-	"extends": "./tsconfig.base.json",
-	"include": ["test/browser/*.ts"]
-}

@@ -5,7 +5,7 @@
 	// import.
 	"extends": ["./tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
 	"include": ["build.mjs", "test/browser/*.mjs"],
-	"references": [{ "path": "./tsconfig.browser.json" }],
+	"references": [{ "path": "./tsconfig.shims.json" }],
 	"compilerOptions": {
 		"allowJs": true,
 		"rewriteRelativeImportExtensions": true
