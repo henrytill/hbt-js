@@ -1,5 +1,6 @@
 // @ts-check
-// Runs the unit tests' browser bundle (see build.mjs) in headless
+// The test:browser script: runs the unit tests' browser bundle (see
+// build.mjs) in headless
 // Chromium or Chrome and exits non-zero unless every test passed.
 // The browser is `chromium` on PATH, or whatever CHROMIUM names:
 //
@@ -13,7 +14,7 @@ import * as url from 'node:url';
 // The same formatting the page uses, straight from the stand-in's
 // source: node strips its types, so this needs neither a build nor
 // knowledge of where tsc puts its output.
-import * as test from './test.ts';
+import * as test from './test/browser/test.ts';
 
 const browser = process.env['CHROMIUM'] ?? 'chromium';
 const page = url.pathToFileURL(path.resolve('dist/test/browser/index.html')).href;

@@ -1,8 +1,8 @@
 // Stands in for `node:test` in the browser bundle (see build.mjs):
 // just the `describe` and `it` the unit tests use, and a runner that
 // writes the outcome into the page twice - as lines in <pre id="result">
-// for a person, and as JSON in <script id="report"> for run.mjs, which
-// reads it back from `chromium --dump-dom`.
+// for a person, and as JSON in <script id="report"> for
+// test-browser.mjs, which reads it back from `chromium --dump-dom`.
 
 // Declared by hand rather than through lib "dom", which would let the
 // library reach for browser globals too.
@@ -61,8 +61,8 @@ export async function run(load: () => void): Promise<void> {
 export type Line = { readonly className: string; readonly text: string };
 
 // The report as text - a line per test and error, and a summary - for
-// both the page and run.mjs, which imports this from tsc's build of
-// this file so that the two cannot drift apart. className is what the
+// both the page and test-browser.mjs, which imports this file's
+// source so that the two cannot drift apart. className is what the
 // page's stylesheet colours each line by.
 export function format(report: Report): { readonly lines: readonly Line[]; readonly summary: Line; readonly passed: boolean } {
 	const lines: Line[] = [];
@@ -94,7 +94,7 @@ function write(outcome: Omit<Report, 'userAgent'>): void {
 	document.getElementById('result')?.replaceChildren(...[...lines, summary].map(span));
 
 	// A script's text is serialized verbatim, not entity-escaped, so
-	// run.mjs needs no decoding; escaping every `<` keeps a `</script>`
+	// test-browser.mjs needs no decoding; escaping every `<` keeps a `</script>`
 	// in a test name or message from closing the element early.
 	const json = document.getElementById('report');
 	if (json !== null) json.textContent = JSON.stringify(report, null, '\t').replaceAll('<', '\\u003c');

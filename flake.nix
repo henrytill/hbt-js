@@ -62,7 +62,7 @@
             pname = "hbt-browser-check";
             nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.chromium ];
             installPhase = ''
-              node test/browser/run.mjs
+              node test-browser.mjs
               touch $out
             '';
           });
