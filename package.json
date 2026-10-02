@@ -12,7 +12,8 @@
 	},
 	"files": [
 		"dist/tsc/src",
-		"dist/tsc/cli"
+		"dist/tsc/cli",
+		"!dist/tsc/**/*.tsbuildinfo"
 	],
 	"scripts": {
 		"clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
