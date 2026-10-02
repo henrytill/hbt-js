@@ -1,12 +1,11 @@
 {
 	// The unit tests, which run in a browser as well as under node. They
-	// are typed against the stand-ins in test/browser, as build.mjs
-	// aliases them for the browser, so a test reaching for what a
-	// stand-in lacks fails here rather than only in the browser; the
-	// emitted imports stay node:test and node:assert/strict, so node
-	// runs the real ones.
+	// are typed against the stand-ins in test/browser, and esbuild reads
+	// these paths too when build.mjs bundles them for the browser, so a
+	// test reaching for what a stand-in lacks fails here rather than
+	// only in the browser; the emitted imports stay node:test and
+	// node:assert/strict, so node runs the real ones.
 	"extends": "../../tsconfig.base.json",
-	"include": ["."],
 	"references": [
 		{ "path": "../../src" },
 		{ "path": "../browser" }

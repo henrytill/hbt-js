@@ -31,7 +31,9 @@ await Promise.all([
 
 	// The unit tests in one classic script, since Chrome refuses
 	// module scripts from file:// URLs. Both node modules they import
-	// are swapped for the shims in test/browser/. browserEntry loads
+	// resolve to the stand-ins in test/browser/ through
+	// test/unit/tsconfig.json's paths, which esbuild reads as tsc does,
+	// so the two cannot map them differently. browserEntry loads
 	// the test files with require() rather than import, which esbuild
 	// evaluates lazily at the call, so `test.run` can catch a throw
 	// while they load and every test has registered before it runs
@@ -46,10 +48,6 @@ await Promise.all([
 		},
 		platform: 'browser',
 		format: 'iife',
-		alias: {
-			'node:test': './test/browser/test.ts',
-			'node:assert/strict': './test/browser/assert.ts',
-		},
 		outfile: 'dist/test/browser/tests.js',
 	}),
 ]);

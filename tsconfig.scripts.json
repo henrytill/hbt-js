@@ -1,13 +1,14 @@
 {
 	// The plain node scripts at the root, each starting with
-	// `// @ts-check`. test-browser.mjs imports test/browser/test.ts,
-	// which node runs by stripping its types;
-	// rewriteRelativeImportExtensions lets tsc accept the import.
+	// `// @ts-check`; node runs them as they are, so nothing is
+	// emitted. rewriteRelativeImportExtensions lets test-browser.mjs
+	// import test/browser/test.ts, whose types node strips.
 	"extends": ["./tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
-	"include": ["build.mjs", "test-browser.mjs"],
+	"include": ["*.mjs"],
 	"references": [{ "path": "./test/browser" }],
 	"compilerOptions": {
 		"allowJs": true,
+		"noEmit": true,
 		"rewriteRelativeImportExtensions": true
 	}
 }
