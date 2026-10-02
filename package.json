@@ -23,7 +23,8 @@
 		"pretest": "npm run build",
 		"test": "node --enable-source-maps --test 'dist/tsc/test/**/*.test.js'",
 		"pretest:browser": "npm run build",
-		"test:browser": "node test-browser.mjs"
+		"test:browser": "node test-browser.mjs",
+		"prepack": "npm run clean && npm run build"
 	},
 	"repository": {
 		"type": "git",
