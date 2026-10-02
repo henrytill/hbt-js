@@ -2,10 +2,7 @@
 	// What every project shares (see tsconfig.json), and as it stands the
 	// library's environment: ECMAScript and nothing else. The projects
 	// that run under node extend @tsconfig/node24 after this, which
-	// overrides the environment and leaves the rest. Each project writes
-	// into the same dist/tsc from the same root, so the output layout is
-	// the one a single project gave: the library and the CLI in
-	// dist/tsc/src.
+	// overrides the environment and leaves the rest.
 	//
 	// The checks come from @tsconfig/strictest, which sets checks alone
 	// and no environment, so it sits under this one without contention.
@@ -23,8 +20,9 @@
 		// imports must resolve as node resolves them.
 		"module": "nodenext",
 
-		// The root is "." because test/browser is built too, so the
-		// library lands in dist/tsc/src.
+		// One root and outDir for every project, so dist/tsc mirrors the
+		// source tree: the library in dist/tsc/src, the CLI in
+		// dist/tsc/cli.
 		"rootDir": ".",
 		"outDir": "./dist/tsc",
 		"composite": true,

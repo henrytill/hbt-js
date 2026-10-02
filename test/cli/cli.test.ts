@@ -1,7 +1,6 @@
 // The CLI as a process, after hbt-rs's cli/tests/cli.rs: what the
 // conformance harness does not reach, which is every flag but `-t` and
-// every failure. Node only, so it is not in test/unit, which the
-// browser run bundles.
+// every failure.
 import assert from 'node:assert/strict';
 import * as child_process from 'node:child_process';
 import * as fs from 'node:fs';

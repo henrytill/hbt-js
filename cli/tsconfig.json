@@ -2,7 +2,6 @@
 	// The CLI: arguments, files and exit codes, around the library. It
 	// runs under node alone, so it gets Node's types.
 	"extends": ["../tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
-	"include": ["."],
 	"references": [{ "path": "../src" }],
 	"compilerOptions": {
 		// As in src/tsconfig.json: dist/tsc/cli is published too.
