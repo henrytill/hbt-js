@@ -42,6 +42,8 @@
             wrapProgram $out/bin/hbt \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
           '';
+
+          meta.mainProgram = "hbt";
         };
       in
       {
