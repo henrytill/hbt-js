@@ -50,7 +50,7 @@
         packages.default = hbt;
         checks = {
           conformance = hbt-data.lib.${system}.check {
-            binary = "${hbt}/bin/hbt";
+            binary = pkgs.lib.getExe hbt;
             waivers = ./conformance.waivers;
           };
         }
