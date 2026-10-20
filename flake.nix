@@ -28,7 +28,7 @@
         # package.json says of it.
         cli = {
           dir = "packages/hbt-cli";
-          inherit (lib.importJSON (self + "/packages/hbt-cli/package.json")) name version;
+          inherit (lib.importJSON (self + "/packages/hbt-cli/package.json")) name version bin;
         };
         hbt = pkgs.stdenv.mkDerivation (finalAttrs: {
           pname = "hbt";
@@ -40,7 +40,6 @@
             pkgs.pnpm
             pkgs.pnpmConfigHook
             pkgs.pnpmBuildHook
-            pkgs.nodejsInstallExecutables
             pkgs.makeWrapper
           ];
           pnpmDeps = pkgs.fetchPnpmDeps {
@@ -53,14 +52,16 @@
             runHook preInstall
             packageOut=$out/lib/node_modules/${cli.name}
             pnpm --filter ${cli.name} deploy --prod --offline "$packageOut"
-            # deploy leaves pnpm's own records, and rewrites package.json
-            # to depend on the library by its path in the build.
-            rm "$packageOut"/{pnpm-lock.yaml,pnpm-workspace.yaml} \
-              "$packageOut"/node_modules/{.modules.yaml,.pnpm-workspace-state-v1.json,.pnpm/lock.yaml}
-            rm -r "$packageOut"/node_modules/.bin
+            # deploy rewrites package.json to depend on the library by
+            # its path in the build, which would leave the output naming
+            # it; nothing reads its other leftovers, pnpm's records.
             install -m 644 ${cli.dir}/package.json "$packageOut"/package.json
-            (cd ${cli.dir} && nodejsInstallExecutables)
-            wrapProgram $out/bin/hbt \
+            # The commit `hbt --version` prints, from the variable
+            # hbt-rs's flake bakes in. Reading self's revision is what
+            # makes a `path:` reference to this flake fail to evaluate,
+            # as it does for hbt-rs.
+            makeWrapper ${lib.getExe pkgs.nodejs} $out/bin/hbt \
+              --add-flags "$packageOut/${cli.bin.hbt}" \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
             runHook postInstall
           '';
