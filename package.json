@@ -6,12 +6,12 @@
 	"scripts": {
 		"clean": "pnpm -r --if-present run clean && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
 		"prebuild": "tsc -b",
-		"build": "node build.mjs",
+		"build": "node scripts/build.mjs",
 		"fmt": "dprint fmt",
 		"pretest": "pnpm run build",
 		"test": "node --enable-source-maps --test 'packages/*/dist/test/**/*.test.js'",
 		"pretest:browser": "pnpm run build",
-		"test:browser": "node test-browser.mjs"
+		"test:browser": "node scripts/test-browser.mjs"
 	},
 	"devDependencies": {
 		"@dprint/json": "^0.24.0",

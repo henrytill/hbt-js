@@ -14,7 +14,7 @@ import * as url from 'node:url';
 // The same formatting the page uses, straight from the stand-in's
 // source, so this needs neither a build nor knowledge of where tsc
 // puts its output.
-import * as test from './test/browser/test.ts';
+import * as test from '../test/browser/test.ts';
 
 const browser = process.env['CHROMIUM'] ?? 'chromium';
 const page = url.pathToFileURL(path.resolve('dist/test/browser/index.html')).href;

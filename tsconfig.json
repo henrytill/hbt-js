@@ -8,6 +8,6 @@
 		{ "path": "./packages/hbt-cli/src" },
 		{ "path": "./packages/hbt-cli/test" },
 		{ "path": "./test/browser" },
-		{ "path": "./tsconfig.scripts.json" }
+		{ "path": "./scripts" }
 	]
 }
