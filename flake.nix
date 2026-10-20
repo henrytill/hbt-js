@@ -26,11 +26,12 @@
         inherit (pkgs) lib;
         src = self;
         npmRoot = self;
+        rootPackage = lib.importJSON (self + "/package.json");
         # The workspace packages, by directory and by name.
         workspaces = map (dir: {
           inherit dir;
           inherit (lib.importJSON (self + "/${dir}/package.json")) name;
-        }) (lib.importJSON (self + "/package.json")).workspaces;
+        }) rootPackage.workspaces;
         library = lib.findFirst (w: w.dir == "packages/hbt") null workspaces;
         # npm links each workspace package into node_modules by a
         # relative link into packages/, which neither the store copy of
@@ -66,8 +67,6 @@
             runHook postBuild
           '';
 
-          nativeBuildInputs = [ pkgs.jq ];
-
           # The hook prunes with --workspace, which keeps the root's
           # devDependencies; pruning at the root first drops them. Its
           # `npm pack --dry-run` would run prepack, which cleans and
@@ -80,21 +79,21 @@
 
           # What the hook leaves of the workspaces is a link to each,
           # dangling in the output. The CLI imports the library at run
-          # time, so its link becomes the files npm would publish of it,
-          # as an install of hbt-cli from the registry would have them.
+          # time, so its link becomes the tarball npm would publish of
+          # it, unpacked, as an install of the CLI from the registry
+          # would have it.
           #
           # The commit `hbt --version` prints, from the variable hbt-rs's
           # flake bakes in. Reading self's revision is what makes a
           # `path:` reference to this flake fail to evaluate, as it does
           # for hbt-rs.
           postInstall = ''
-            nodeModules=$out/lib/node_modules/$(jq -r .name package.json)/node_modules
+            nodeModules=$out/lib/node_modules/${rootPackage.name}/node_modules
             ${rmWorkspaceLinks "$nodeModules"}
-            npm pack --json --dry-run --ignore-scripts --loglevel=warn --workspace=${library.dir} \
-              | jq -r '.[0].files[].path' \
-              | while IFS= read -r file; do
-                  install -D -m 644 "${library.dir}/$file" "$nodeModules/${library.name}/$file"
-                done
+            pack=$(mktemp -d)
+            npm pack --ignore-scripts --loglevel=warn --workspace=${library.dir} --pack-destination "$pack" >/dev/null
+            mkdir -p "$nodeModules/${library.name}"
+            tar -xzf "$pack"/*.tgz --strip-components=1 -C "$nodeModules/${library.name}"
 
             wrapProgram $out/bin/hbt \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
