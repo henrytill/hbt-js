@@ -25,10 +25,10 @@
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
         rootPackage = lib.importJSON (self + "/package.json");
-        # A workspace package, by directory and by name.
+        # A workspace package, by directory, name and version.
         workspace = dir: {
           inherit dir;
-          inherit (lib.importJSON (self + "/${dir}/package.json")) name;
+          inherit (lib.importJSON (self + "/${dir}/package.json")) name version;
         };
         workspaces = map workspace rootPackage.workspaces;
         cli = workspace "packages/hbt-cli";
@@ -38,7 +38,7 @@
         workspaceLinks = nodeModules: map (w: "${nodeModules}/${w.name}") workspaces;
         hbt = pkgs.buildNpmPackage {
           pname = "hbt";
-          version = "0.1.0";
+          inherit (cli) version;
           src = self;
 
           npmDeps = pkgs.importNpmLock { npmRoot = self; };
