@@ -138,8 +138,23 @@
           # themselves must point into the working tree, so the shell
           # makes them, and linkNodeModulesHook, which manages only
           # links into the store, leaves them be.
-          npmDeps = pkgs.importNpmLock.buildNodeModules {
-            inherit npmRoot;
+          #
+          # Its npmRoot holds only the manifests and the lockfile, so the
+          # shell's node_modules is rebuilt when they change and not on
+          # every edit: importNpmLock resolves each workspace's lock entry
+          # against npmRoot too, which with the whole tree would make the
+          # tree an input.
+          npmDeps = pkgs.importNpmLock.buildNodeModules rec {
+            npmRoot = lib.fileset.toSource {
+              root = ./.;
+              fileset = lib.fileset.unions (
+                [
+                  ./package.json
+                  ./package-lock.json
+                ]
+                ++ map (w: ./. + "/${w.dir}/package.json") workspaces
+              );
+            };
             inherit (pkgs) nodejs;
             derivationArgs = {
               # Rather than the root package.json's name, whose scope
