@@ -14,7 +14,7 @@
 		"!dist/**/*.tsbuildinfo"
 	],
 	"scripts": {
-		"prepack": "cd ../.. && npm run clean && npm run build"
+		"prepack": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\" && tsc -b src"
 	},
 	"repository": {
 		"type": "git",
