@@ -33,7 +33,7 @@
           inherit (lib.importJSON (self + "/${dir}/package.json")) name;
         };
         workspaces = map workspace rootPackage.workspaces;
-        library = workspace "packages/hbt";
+        cli = workspace "packages/hbt-cli";
         # npm links each workspace package into node_modules by a
         # relative link into packages/, which neither the store copy of
         # node_modules below nor the package's has beside it. The scope
@@ -58,46 +58,49 @@
 
           npmConfigHook = pkgs.importNpmLock.npmConfigHook;
 
-          # npmInstallHook installs this workspace's packed files and
-          # bin, under the root package.json's name. npmBuildHook would
-          # build only this workspace, so the build is the root's.
-          npmWorkspace = "packages/hbt-cli";
-          buildPhase = ''
-            runHook preBuild
-            npm run build
-            runHook postBuild
-          '';
-
-          # The hook prunes with --workspace, which keeps the root's
-          # devDependencies; pruning at the root first drops them. Its
-          # `npm pack --dry-run` would run prepack, which cleans and
-          # rebuilds, with tsc pruned by then; buildPhase has just built
-          # from clean, so the pack skips it.
-          preInstall = ''
-            npm prune --omit=dev --no-save
-          '';
-          npmPackFlags = [ "--ignore-scripts" ];
-
-          # What the hook leaves of the workspaces is a link to each,
-          # dangling in the output. The CLI imports the library at run
-          # time, so its link becomes the tarball npm would publish of
-          # it, unpacked, as an install of the CLI from the registry
-          # would have it.
+          # npmInstallHook installs a workspace that imports none of the
+          # others: given npmWorkspace, it would build and prune that one
+          # alone, and copy node_modules with links to the rest that
+          # dangle in the output. So the install is this one, as
+          # `npm install -g` of the CLI's tarball would lay it out: the
+          # CLI at lib/node_modules/<its name>, its production
+          # dependencies beside it, and in place of the link to each
+          # other workspace the tarball npm would publish of it. The
+          # packs skip prepack, which would rebuild with tsc pruned;
+          # npmBuildHook has just built from clean.
           #
           # The commit `hbt --version` prints, from the variable hbt-rs's
           # flake bakes in. Reading self's revision is what makes a
           # `path:` reference to this flake fail to evaluate, as it does
           # for hbt-rs.
-          postInstall = ''
-            nodeModules=$out/lib/node_modules/${rootPackage.name}/node_modules
-            ${rmWorkspaceLinks "$nodeModules"}
+          installPhase = ''
+            runHook preInstall
+
+            npm prune --omit=dev --no-save
+            find node_modules -maxdepth 1 -type d -empty -delete
+
             pack=$(mktemp -d)
-            npm pack --ignore-scripts --loglevel=warn --workspace=${library.dir} --pack-destination "$pack" >/dev/null
-            mkdir -p "$nodeModules/${library.name}"
-            tar -xzf "$pack"/*.tgz --strip-components=1 -C "$nodeModules/${library.name}"
+            # Unpacks the tarball npm would publish of workspace $1 into $2.
+            unpack() {
+              mkdir -p "$pack/$1" "$2"
+              npm pack --ignore-scripts --loglevel=warn --workspace="$1" --pack-destination "$pack/$1" >/dev/null
+              tar -xzf "$pack/$1"/*.tgz --strip-components=1 -C "$2"
+            }
+
+            packageOut=$out/lib/node_modules/${cli.name}
+            unpack ${cli.dir} "$packageOut"
+            cp -r node_modules "$packageOut/node_modules"
+            rm -r "$packageOut/node_modules/.bin"
+            ${rmWorkspaceLinks "$packageOut/node_modules"}
+            ${lib.concatMapStrings (w: ''
+              unpack ${w.dir} "$packageOut/node_modules/${w.name}"
+            '') (lib.filter (w: w.dir != cli.dir) workspaces)}
+            (cd ${cli.dir} && nodejsInstallExecutables)
 
             wrapProgram $out/bin/hbt \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
+
+            runHook postInstall
           '';
 
           meta.mainProgram = "hbt";
