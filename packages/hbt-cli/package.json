@@ -32,7 +32,7 @@
 	},
 	"homepage": "https://github.com/henrytill/hbt-js#readme",
 	"dependencies": {
-		"@henrytill/hbt": "0.1.0",
+		"@henrytill/hbt": "workspace:0.1.0",
 		"yaml": "^2.9.1"
 	}
 }
