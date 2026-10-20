@@ -6,11 +6,18 @@
 // reaches for a Node builtin fails the build the day it is added
 // rather than the day a browser front end is.
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import * as esbuild from 'esbuild';
 
+// Every path below is the repository's, wherever this is run from:
+// esbuild resolves against the directory node started in, not the
+// chdir, so it is given the root as well.
+const root = path.join(import.meta.dirname, '..');
+process.chdir(root);
+
 /** @type {esbuild.BuildOptions} */
-const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
+const common = { bundle: true, sourcemap: true, logLevel: 'warning', absWorkingDir: root };
 // Not the CLI's test: it spawns the CLI, so it runs under node alone.
 const tests = fs.globSync('packages/hbt/test/**/*.test.ts');
 const browserEntry = [
