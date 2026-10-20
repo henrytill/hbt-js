@@ -67,6 +67,28 @@
 
           meta.mainProgram = "hbt";
         });
+        # The store fetchPnpmDeps fetched, unpacked once for the dev
+        # shell to install from, as pnpmConfigHook unpacks it in the
+        # build; read-only is enough for an offline install.
+        pnpmStore =
+          pkgs.runCommand "hbt-pnpm-store"
+            {
+              nativeBuildInputs = [
+                pkgs.sqlite
+                pkgs.zstd
+              ];
+            }
+            ''
+              mkdir $out
+              tar --zstd -xf ${hbt.pnpmDeps}/pnpm-store.tar.zst -C $out
+              chmod -R +w $out
+              # Kept as SQL by fetchPnpmDeps, since the database file is not
+              # reproducible.
+              if [ -f $out/v11/index.db.sql ]; then
+                sqlite3 $out/v11/index.db < $out/v11/index.db.sql
+                rm $out/v11/index.db.sql
+              fi
+            '';
       in
       {
         packages.default = hbt;
@@ -96,10 +118,24 @@
             hbt-data.packages.${system}.python
             pkgs.nodejs
             pkgs.pnpm
-            pkgs.pnpmConfigHook
           ];
-          inherit (hbt) pnpmDeps;
-          shellHook = "pnpmConfigHook";
+          # pnpmConfigHook is for the sandbox: it writes the store and
+          # its other settings into the user's pnpm config, and unpacks
+          # the store afresh each time. Here they are flags, for this
+          # install alone. The lockfile is trusted as the hook trusts it,
+          # since pnpm would check it against the registry, which
+          # fetchPnpmDeps has done. An install with nothing to do takes
+          # a few tens of milliseconds, so it runs on every entry, at
+          # the root, which git finds, so that entering from a
+          # subdirectory makes no node_modules there.
+          shellHook = ''
+            (
+              cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" &&
+                pnpm_config_trust_lockfile=true pnpm install --offline --frozen-lockfile \
+                  --store-dir=${pnpmStore} --package-import-method=copy \
+                  --config.confirm-modules-purge=false --reporter=silent
+            )
+          '';
         };
       }
     );
