@@ -24,12 +24,8 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
-        # The CLI's workspace package: its directory, and what its
-        # package.json says of it.
-        cli = {
-          dir = "packages/hbt-cli";
-          inherit (lib.importJSON (self + "/packages/hbt-cli/package.json")) name version bin;
-        };
+        cliDir = "packages/hbt-cli";
+        cli = lib.importJSON (self + "/${cliDir}/package.json");
         hbt = pkgs.stdenv.mkDerivation (finalAttrs: {
           pname = "hbt";
           inherit (cli) version;
@@ -55,7 +51,7 @@
             # deploy rewrites package.json to depend on the library by
             # its path in the build, which would leave the output naming
             # it; nothing reads its other leftovers, pnpm's records.
-            install -m 644 ${cli.dir}/package.json "$packageOut"/package.json
+            install -m 644 ${cliDir}/package.json "$packageOut"/package.json
             # The commit `hbt --version` prints, from the variable
             # hbt-rs's flake bakes in. Reading self's revision is what
             # makes a `path:` reference to this flake fail to evaluate,
