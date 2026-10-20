@@ -36,19 +36,8 @@
         cli = workspace "packages/hbt-cli";
         # npm links each workspace package into node_modules by a
         # relative link into packages/, which neither the store copy of
-        # node_modules below nor the package's has beside it. The scope
-        # directory goes too once empty, or linkNodeModulesHook would
-        # link it into the store, where the shell cannot add to it.
-        rmWorkspaceLinks =
-          nodeModules:
-          let
-            links = map (w: "${nodeModules}/${w.name}") workspaces;
-          in
-          ''
-            rm ${lib.concatStringsSep " " links}
-            rmdir --ignore-fail-on-non-empty ${lib.concatStringsSep " " (lib.unique (map dirOf links))}
-            rm -f ${nodeModules}/.bin/hbt
-          '';
+        # node_modules below nor the package's has beside it.
+        workspaceLinks = nodeModules: map (w: "${nodeModules}/${w.name}") workspaces;
         hbt = pkgs.buildNpmPackage {
           pname = "hbt";
           version = "0.1.0";
@@ -91,7 +80,7 @@
             unpack ${cli.dir} "$packageOut"
             cp -r node_modules "$packageOut/node_modules"
             rm -r "$packageOut/node_modules/.bin"
-            ${rmWorkspaceLinks "$packageOut/node_modules"}
+            rm ${toString (workspaceLinks "$packageOut/node_modules")}
             ${lib.concatMapStrings (w: ''
               unpack ${w.dir} "$packageOut/node_modules/${w.name}"
             '') (lib.filter (w: w.dir != cli.dir) workspaces)}
@@ -167,7 +156,17 @@
               postPatch = lib.concatMapStrings (w: ''
                 install -D -m 644 ${npmRoot}/${w.dir}/package.json ${w.dir}/package.json
               '') workspaces;
-              postInstall = rmWorkspaceLinks "$out/node_modules";
+              # The scope directory goes too once empty, or
+              # linkNodeModulesHook would link it into the store, where
+              # the shell cannot add to it.
+              postInstall =
+                let
+                  links = workspaceLinks "$out/node_modules";
+                in
+                ''
+                  rm ${toString links}
+                  rmdir --ignore-fail-on-non-empty ${toString (lib.unique (map dirOf links))}
+                '';
             };
           };
           postShellHook = lib.concatMapStrings (w: ''
