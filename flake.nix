@@ -55,11 +55,6 @@
           # other workspace the tarball npm would publish of it. The
           # packs skip prepack, which would rebuild with tsc pruned;
           # npmBuildHook has just built from clean.
-          #
-          # The commit `hbt --version` prints, from the variable hbt-rs's
-          # flake bakes in. Reading self's revision is what makes a
-          # `path:` reference to this flake fail to evaluate, as it does
-          # for hbt-rs.
           installPhase = ''
             runHook preInstall
 
@@ -84,6 +79,10 @@
             '') (lib.filter (w: w.dir != cli.dir) workspaces)}
             (cd ${cli.dir} && nodejsInstallExecutables)
 
+            # The commit `hbt --version` prints, from the variable
+            # hbt-rs's flake bakes in. Reading self's revision is what
+            # makes a `path:` reference to this flake fail to evaluate,
+            # as it does for hbt-rs.
             wrapProgram $out/bin/hbt \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
 
