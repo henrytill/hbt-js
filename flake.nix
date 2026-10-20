@@ -98,13 +98,13 @@
         packages.default = hbt;
         checks = {
           conformance = hbt-data.lib.${system}.check {
-            binary = pkgs.lib.getExe hbt;
+            binary = lib.getExe hbt;
             waivers = ./conformance.waivers;
           };
         }
         # nixpkgs' chromium is Linux-only, and an unsupported package
         # fails evaluation of every check, so darwin skips this one.
-        // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           # The unit tests again, in headless Chromium, by the script
           # `npm run test:browser` runs, against the tests this build
           # bundled for the browser.
