@@ -39,6 +39,18 @@
           };
         workspaces = map workspace rootPackage.workspaces;
         cli = workspace "packages/hbt-cli";
+        # npm nests a dependency under a workspace when the workspaces
+        # need versions no one copy satisfies. Neither the package, which
+        # puts the root's node_modules beside the CLI, nor the dev shell,
+        # whose flattened root holds one copy of each, would keep it, so
+        # both refuse a lockfile that has one.
+        refuseNested =
+          let
+            nested = lib.filter (path: lib.any (w: lib.hasPrefix "${w.dir}/node_modules/" path) workspaces) (
+              lib.attrNames (lib.importJSON (self + "/package-lock.json")).packages
+            );
+          in
+          lib.throwIf (nested != [ ]) "workspaces have nested dependencies, which this flake cannot install: ${toString nested}";
         # The manifests and the lockfile, and nothing else, so what is
         # built from them alone is rebuilt when they change and not on
         # every edit.
@@ -58,29 +70,23 @@
         # Nix only names the dependencies; npm edits package.json and
         # rewrites the lockfile, offline, from the entries it already
         # has, and fails rather than resolve a range none of them
-        # satisfies. A copy npm nested under one workspace, because the
-        # two need versions no one copy satisfies, is the case it would
-        # not catch: the root can hold only one, so it is refused here.
+        # satisfies.
         devManifests =
           let
             names = map (w: w.name) workspaces;
             dependencies = removeAttrs (lib.foldl' (acc: w: acc // w.dependencies) { } workspaces) names;
           in
-          pkgs.runCommand "hbt-dev-manifests" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
+          refuseNested (pkgs.runCommand "hbt-dev-manifests" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
             cp -r --no-preserve=mode ${manifests}/. .
             export HOME=$TMPDIR npm_config_cache=$TMPDIR/npm-cache
-            if grep -q '"packages/[^"]*/node_modules/' package-lock.json; then
-              echo "a workspace has a nested dependency, which the dev shell cannot flatten" >&2
-              exit 1
-            fi
             npm pkg delete workspaces
             npm pkg set ${lib.escapeShellArgs (lib.mapAttrsToList (n: v: "dependencies.${n}=${v}") dependencies)}
             rm -r packages
             npm install --package-lock-only --offline --ignore-scripts --no-audit --no-fund
             mkdir $out
             cp package.json package-lock.json $out
-          '';
-        hbt = pkgs.buildNpmPackage {
+          '');
+        hbt = refuseNested (pkgs.buildNpmPackage {
           pname = "hbt";
           inherit (cli) version;
           src = self;
@@ -135,7 +141,7 @@
           '';
 
           meta.mainProgram = "hbt";
-        };
+        });
       in
       {
         packages.default = hbt;
