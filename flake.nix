@@ -48,9 +48,11 @@
             runHook preInstall
             packageOut=$out/lib/node_modules/${cli.name}
             pnpm --filter ${cli.name} deploy --prod --offline "$packageOut"
-            # deploy rewrites package.json to depend on the library by
-            # its path in the build, which would leave the output naming
-            # it; nothing reads its other leftovers, pnpm's records.
+            # deploy leaves pnpm's own records, one stamped with the time
+            # of the build, and rewrites package.json to depend on the
+            # library by its path in the build.
+            rm -r "$packageOut"/{pnpm-lock.yaml,pnpm-workspace.yaml} \
+              "$packageOut"/node_modules/{.bin,.modules.yaml,.pnpm-workspace-state-v1.json,.pnpm/lock.yaml}
             install -m 644 ${cliDir}/package.json "$packageOut"/package.json
             # The commit `hbt --version` prints, from the variable
             # hbt-rs's flake bakes in. Reading self's revision is what
