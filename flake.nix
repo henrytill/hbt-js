@@ -82,7 +82,18 @@
         devManifests =
           let
             names = map (w: w.name) workspaces;
-            dependencies = removeAttrs (lib.foldl' (acc: w: acc // w.dependencies) { } workspaces) names;
+            # One range per dependency: the flattened root holds one, and
+            # picking one of two would check the shell against a range a
+            # workspace never declared.
+            dependencies = lib.mapAttrs (
+              name: ranges:
+              let
+                distinct = lib.unique ranges;
+              in
+              lib.throwIfNot (lib.length distinct == 1)
+                "workspaces declare ${name} as ${lib.concatStringsSep " and " distinct}, which the dev shell cannot flatten"
+                (lib.head distinct)
+            ) (lib.zipAttrs (map (w: removeAttrs w.dependencies names) workspaces));
           in
           refuseNested (pkgs.runCommand "hbt-dev-manifests" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
             cp -r --no-preserve=mode ${manifests}/. .
