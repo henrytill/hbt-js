@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import * as child_process from 'node:child_process';
 import * as fs from 'node:fs';
+import * as module from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
@@ -73,6 +74,14 @@ describe('hbt', () => {
 		const { status, stdout } = run({ ...process.env, HBT_COMMIT_SHORT_HASH: '7e16a14' }, '-V');
 		assert.equal(status, 0);
 		assert.match(stdout, /^hbt \d+\.\d+\.\d+ \(7e16a14\)\n$/);
+	});
+
+	it("prints the library's version, which the two packages share", () => {
+		// The CLI prints its own version. Its exact dependency on the
+		// library catches a bump of the library alone, but not of the CLI
+		// alone, which this does.
+		const library = module.createRequire(import.meta.url)('@henrytill/hbt/package.json') as { version: string };
+		assert.equal(hbt('--version').stdout, `hbt ${library.version}\n`);
 	});
 
 	it('names the file a parse error came from, and the cause', () => {
