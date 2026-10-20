@@ -7,6 +7,8 @@
 	"include": ["*.mjs"],
 	"references": [{ "path": "./test/browser" }],
 	"compilerOptions": {
+		"rootDir": ".",
+		"outDir": "./dist/tsc",
 		"allowJs": true,
 		"noEmit": true,
 		"rewriteRelativeImportExtensions": true

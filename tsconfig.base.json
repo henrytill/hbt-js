@@ -16,16 +16,18 @@
 		"lib": ["es2025"],
 		"types": [],
 		// How the package is loaded, not what platform it runs on: node
-		// runs dist/tsc as it is, and a bundler reads the same files, so
+		// runs dist as it is, and a bundler reads the same files, so
 		// imports must resolve as node resolves them.
 		"module": "nodenext",
 
-		// The root's own projects build into dist/tsc, mirroring the
-		// tree. Each package's projects override both with the
-		// package's directory and its own dist, which so mirrors the
-		// package: its source in dist/src, its tests in dist/test.
-		"rootDir": ".",
-		"outDir": "./dist/tsc",
+		// Each project sits in a directory of its package - src or
+		// test - and both of a package's projects build into its dist,
+		// which so mirrors the package: its source in dist/src, its
+		// tests in dist/test. ${configDir} is the directory of the
+		// tsconfig.json that extends this. The root's own projects
+		// override both.
+		"rootDir": "${configDir}/..",
+		"outDir": "${configDir}/../dist",
 		"composite": true,
 		"sourceMap": true,
 
