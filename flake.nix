@@ -97,7 +97,7 @@
         # fails evaluation of every check, so darwin skips this one.
         // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
           # The unit tests again, in headless Chromium, by the script
-          # `npm run test:browser` runs, against the tests this build
+          # `pnpm run test:browser` runs, against the tests this build
           # bundled for the browser.
           browser = hbt.overrideAttrs (old: {
             pname = "hbt-browser-check";
