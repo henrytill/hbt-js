@@ -2,7 +2,7 @@
 
 ## REMEMBER
 
-**Use GitHub MCP for all GitHub queries** (instead of fetching webpages)
+**Use `gh` for everything on GitHub** - queries as well as writes, rather than the GitHub MCP server or fetching github.com pages
 
 **Never work directly on `master`** - branch first, land via PR (see [Git Workflow](#git-workflow))
 
