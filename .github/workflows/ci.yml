@@ -32,11 +32,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      # Without the pretest rebuilds; the step above built.
-      - run: pnpm --config.enable-pre-post-scripts=false test
+      # Each builds first, the second time with nothing to do.
+      - run: pnpm test
       # GitHub's Ubuntu runners ship Google Chrome.
-      - run: pnpm --config.enable-pre-post-scripts=false run test:browser
+      - run: pnpm run test:browser
         env:
           CHROMIUM: google-chrome
   linux-flake:
