@@ -24,7 +24,6 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
-        npmRoot = self;
         rootPackage = lib.importJSON (self + "/package.json");
         # A workspace package, by directory and by name.
         workspace = dir: {
@@ -42,7 +41,7 @@
           version = "0.1.0";
           src = self;
 
-          npmDeps = pkgs.importNpmLock { inherit npmRoot; };
+          npmDeps = pkgs.importNpmLock { npmRoot = self; };
 
           npmConfigHook = pkgs.importNpmLock.npmConfigHook;
 
