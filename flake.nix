@@ -38,8 +38,11 @@
             pkgs.pnpmBuildHook
             pkgs.makeWrapper
           ];
+          # Named here, not from finalAttrs, so that the browser check,
+          # which renames the package, shares this fetch.
           pnpmDeps = pkgs.fetchPnpmDeps {
-            inherit (finalAttrs) pname version src;
+            pname = "hbt";
+            inherit (finalAttrs) version src;
             fetcherVersion = 4;
             hash = "sha256-TbpK2jUbR4GhgC5y/ZkY4OVNi74WK9x2EihkXsJS7vo=";
           };
