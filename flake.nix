@@ -25,17 +25,61 @@
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
         rootPackage = lib.importJSON (self + "/package.json");
-        # A workspace package, by directory, name and version.
-        workspace = dir: {
-          inherit dir;
-          inherit (lib.importJSON (self + "/${dir}/package.json")) name version;
-        };
+        # A workspace package: its directory, and what its package.json
+        # says of it.
+        workspace =
+          dir:
+          let
+            package = lib.importJSON (self + "/${dir}/package.json");
+          in
+          {
+            inherit dir;
+            inherit (package) name version;
+            dependencies = package.dependencies or { };
+          };
         workspaces = map workspace rootPackage.workspaces;
         cli = workspace "packages/hbt-cli";
-        # npm links each workspace package into node_modules by a
-        # relative link into packages/, which neither the store copy of
-        # node_modules below nor the package's has beside it.
-        workspaceLinks = nodeModules: map (w: "${nodeModules}/${w.name}") workspaces;
+        # The manifests and the lockfile, and nothing else, so what is
+        # built from them alone is rebuilt when they change and not on
+        # every edit.
+        manifests = lib.fileset.toSource {
+          root = ./.;
+          fileset = lib.fileset.unions (
+            [
+              ./package.json
+              ./package-lock.json
+            ]
+            ++ map (w: ./. + "/${w.dir}/package.json") workspaces
+          );
+        };
+        # The dev shell's package.json and lockfile: the workspaces'
+        # dependencies made the root's, and the workspaces themselves
+        # gone, which the shell links into the working tree instead.
+        # Nix only names the dependencies; npm edits package.json and
+        # rewrites the lockfile, offline, from the entries it already
+        # has, and fails rather than resolve a range none of them
+        # satisfies. A copy npm nested under one workspace, because the
+        # two need versions no one copy satisfies, is the case it would
+        # not catch: the root can hold only one, so it is refused here.
+        devManifests =
+          let
+            names = map (w: w.name) workspaces;
+            dependencies = removeAttrs (lib.foldl' (acc: w: acc // w.dependencies) { } workspaces) names;
+          in
+          pkgs.runCommand "hbt-dev-manifests" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
+            cp -r --no-preserve=mode ${manifests}/. .
+            export HOME=$TMPDIR npm_config_cache=$TMPDIR/npm-cache
+            if grep -q '"packages/[^"]*/node_modules/' package-lock.json; then
+              echo "a workspace has a nested dependency, which the dev shell cannot flatten" >&2
+              exit 1
+            fi
+            npm pkg delete workspaces
+            npm pkg set ${lib.escapeShellArgs (lib.mapAttrsToList (n: v: "dependencies.${n}=${v}") dependencies)}
+            rm -r packages
+            npm install --package-lock-only --offline --ignore-scripts --no-audit --no-fund
+            mkdir $out
+            cp package.json package-lock.json $out
+          '';
         hbt = pkgs.buildNpmPackage {
           pname = "hbt";
           inherit (cli) version;
@@ -73,7 +117,8 @@
             unpack ${cli.dir} "$packageOut"
             cp -r node_modules "$packageOut/node_modules"
             rm -r "$packageOut/node_modules/.bin"
-            rm ${toString (workspaceLinks "$packageOut/node_modules")}
+            # npm's relative links to the workspaces, dangling here.
+            rm ${toString (map (w: "$packageOut/node_modules/${w.name}") workspaces)}
             ${lib.concatMapStrings (w: ''
               unpack ${w.dir} "$packageOut/node_modules/${w.name}"
             '') (lib.filter (w: w.dir != cli.dir) workspaces)}
@@ -121,50 +166,19 @@
             importNpmLock.hooks.linkNodeModulesHook
             nodejs
           ];
-          # buildNodeModules installs from package.json and the lockfile
-          # alone, and npm skips a workspace whose directory it cannot
-          # see, dependencies and all; given each one's package.json, it
-          # installs their dependencies. The links to the workspaces
-          # themselves must point into the working tree, so the shell
-          # makes them, and linkNodeModulesHook, which manages only
-          # links into the store, leaves them be.
-          #
-          # Its npmRoot holds only the manifests and the lockfile, so the
-          # shell's node_modules is rebuilt when they change and not on
-          # every edit: importNpmLock resolves each workspace's lock entry
-          # against npmRoot too, which with the whole tree would make the
-          # tree an input.
-          npmDeps = pkgs.importNpmLock.buildNodeModules rec {
-            npmRoot = lib.fileset.toSource {
-              root = ./.;
-              fileset = lib.fileset.unions (
-                [
-                  ./package.json
-                  ./package-lock.json
-                ]
-                ++ map (w: ./. + "/${w.dir}/package.json") workspaces
-              );
-            };
+          # Read from devManifests' output, so evaluating the shell
+          # builds it first: importNpmLock needs the lockfile at
+          # evaluation time. The links to the workspaces point into the
+          # working tree, so the shell makes them, and
+          # linkNodeModulesHook, which manages only links into the store,
+          # leaves them be.
+          npmDeps = pkgs.importNpmLock.buildNodeModules {
+            package = lib.importJSON "${devManifests}/package.json";
+            packageLock = lib.importJSON "${devManifests}/package-lock.json";
             inherit (pkgs) nodejs;
-            derivationArgs = {
-              # Rather than the root package.json's name, whose scope
-              # would start the store path with a dash.
-              pname = "hbt-node-modules";
-              postPatch = lib.concatMapStrings (w: ''
-                install -D -m 644 ${npmRoot}/${w.dir}/package.json ${w.dir}/package.json
-              '') workspaces;
-              # The scope directory goes too once empty, or
-              # linkNodeModulesHook would link it into the store, where
-              # the shell cannot add to it.
-              postInstall =
-                let
-                  links = workspaceLinks "$out/node_modules";
-                in
-                ''
-                  rm ${toString links}
-                  rmdir --ignore-fail-on-non-empty ${toString (lib.unique (map dirOf links))}
-                '';
-            };
+            # Rather than the root package.json's name, whose scope would
+            # start the store path with a dash.
+            derivationArgs.pname = "hbt-node-modules";
           };
           postShellHook = lib.concatMapStrings (w: ''
             mkdir -p node_modules/${dirOf w.name}
