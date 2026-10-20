@@ -4,13 +4,13 @@
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
 	"scripts": {
-		"clean": "npm run clean --workspaces --if-present && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+		"clean": "pnpm -r --if-present run clean && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
 		"prebuild": "tsc -b",
 		"build": "node build.mjs",
 		"fmt": "dprint fmt",
-		"pretest": "npm run build",
+		"pretest": "pnpm run build",
 		"test": "node --enable-source-maps --test 'packages/*/dist/test/**/*.test.js'",
-		"pretest:browser": "npm run build",
+		"pretest:browser": "pnpm run build",
 		"test:browser": "node test-browser.mjs"
 	},
 	"devDependencies": {
