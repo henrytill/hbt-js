@@ -4,9 +4,5 @@
 	// library by its package name, as any consumer does; the reference
 	// only makes `tsc -b` build the library first.
 	"extends": ["../../../tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
-	"references": [{ "path": "../../hbt/src" }],
-	"compilerOptions": {
-		"rootDir": "..",
-		"outDir": "../dist"
-	}
+	"references": [{ "path": "../../hbt/src" }]
 }

@@ -7,6 +7,8 @@
 	// tests: everything else reads the source.
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
+		"rootDir": "../..",
+		"outDir": "../../dist/tsc",
 		"emitDeclarationOnly": true
 	}
 }

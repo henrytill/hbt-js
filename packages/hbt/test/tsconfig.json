@@ -11,8 +11,6 @@
 		{ "path": "../../../test/browser" }
 	],
 	"compilerOptions": {
-		"rootDir": "..",
-		"outDir": "../dist",
 		"paths": {
 			"node:test": ["../../../test/browser/test.ts"],
 			"node:assert/strict": ["../../../test/browser/assert.ts"]
