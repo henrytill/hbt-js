@@ -8,7 +8,7 @@
 		"packages/hbt-cli"
 	],
 	"scripts": {
-		"clean": "npm run clean --workspaces && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+		"clean": "npm run clean --workspaces --if-present && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
 		"prebuild": "tsc -b",
 		"build": "node build.mjs",
 		"fmt": "dprint fmt",
