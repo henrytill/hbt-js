@@ -1,0 +1,37 @@
+{
+	"name": "@henrytill/hbt-cli",
+	"version": "0.1.0",
+	"description": "Heterogeneous Bookmark Transformation: the command line",
+	"type": "module",
+	"bin": {
+		"hbt": "dist/src/cli.js"
+	},
+	"exports": {
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist/src",
+		"!dist/**/*.tsbuildinfo"
+	],
+	"scripts": {
+		"prepack": "cd ../.. && npm run clean && npm run build"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/henrytill/hbt-js.git",
+		"directory": "packages/hbt-cli"
+	},
+	"author": {
+		"name": "Henry Till",
+		"email": "henrytill@gmail.com"
+	},
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/henrytill/hbt-js/issues"
+	},
+	"homepage": "https://github.com/henrytill/hbt-js#readme",
+	"dependencies": {
+		"@henrytill/hbt": "0.1.0",
+		"yaml": "^2.9.1"
+	}
+}

@@ -1,0 +1,12 @@
+{
+	// The CLI: arguments, files and exit codes, around the library. It
+	// runs under node alone, so it gets Node's types. It imports the
+	// library by its package name, as any consumer does; the reference
+	// only makes `tsc -b` build the library first.
+	"extends": ["../../../tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
+	"references": [{ "path": "../../hbt/src" }],
+	"compilerOptions": {
+		"rootDir": "..",
+		"outDir": "../dist"
+	}
+}

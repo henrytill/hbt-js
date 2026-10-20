@@ -12,7 +12,7 @@ import {
 	mkName,
 	mkTime,
 	mkUrl,
-} from '../../src/entity.js';
+} from '../src/entity.js';
 
 const testUrl = mkUrl('https://example.com/');
 
