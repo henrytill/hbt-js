@@ -120,22 +120,11 @@
             pkgs.nodejs
             pkgs.pnpm
           ];
-          # pnpmConfigHook is for the sandbox: it writes the store and
-          # its other settings into the user's pnpm config, and unpacks
-          # the store afresh each time. Here they are flags, for this
-          # install alone. The lockfile is trusted as the hook trusts it,
-          # since pnpm would check it against the registry, which
-          # fetchPnpmDeps has done. An install with nothing to do takes
-          # a few tens of milliseconds, so it runs on every entry, at
-          # the root, which git finds, so that entering from a
-          # subdirectory makes no node_modules there.
+          # Not pnpmConfigHook, which is for the sandbox; AGENTS.md
+          # says why. pnpm finds the workspace root from any directory.
           shellHook = ''
-            (
-              cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" &&
-                pnpm_config_trust_lockfile=true pnpm install --offline --frozen-lockfile \
-                  --store-dir=${pnpmStore} --package-import-method=copy \
-                  --config.confirm-modules-purge=false --reporter=silent
-            )
+            pnpm install --offline --frozen-lockfile --trust-lockfile \
+              --store-dir=${pnpmStore} --package-import-method=copy --reporter=silent
           '';
         };
       }
