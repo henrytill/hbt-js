@@ -115,10 +115,18 @@
             pkgs.pnpm
           ];
           # Not pnpmConfigHook, which is for the sandbox; AGENTS.md
-          # says why. pnpm finds the workspace root from any directory.
+          # says why. pnpm finds the workspace root from any directory
+          # in the checkout, but outside it would start a project where
+          # it stands, or install another workspace, so the hook checks
+          # that the root it finds is this one.
           shellHook = ''
-            pnpm install --offline --frozen-lockfile --trust-lockfile \
-              --store-dir=${pnpmStore} --package-import-method=copy --reporter=silent
+            if root=$(pnpm root -w 2>/dev/null) &&
+              [ "$(node -p "require('$root/../package.json').name" 2>/dev/null)" = ${(lib.importJSON ./package.json).name} ]; then
+              pnpm install --offline --frozen-lockfile --trust-lockfile \
+                --store-dir=${pnpmStore} --package-import-method=copy --reporter=silent
+            else
+              echo "Not in the hbt-js checkout, so not installing node_modules" >&2
+            fi
           '';
         };
       }
