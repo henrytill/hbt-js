@@ -207,9 +207,16 @@
             # start the store path with a dash.
             derivationArgs.pname = "hbt-node-modules";
           };
+          # linkNodeModulesHook links into $npmRoot when it is set, and
+          # into the current directory otherwise, so `nix develop` from
+          # a subdirectory would make a node_modules there; it runs this
+          # first, and the links to the workspaces after, at the root.
+          preShellHook = ''
+            npmRoot=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+          '';
           postShellHook = lib.concatMapStrings (w: ''
-            mkdir -p node_modules/${dirOf w.name}
-            ln -sfnr ${w.dir} node_modules/${w.name}
+            mkdir -p "$npmRoot/node_modules/${dirOf w.name}"
+            ln -sfnr "$npmRoot/${w.dir}" "$npmRoot/node_modules/${w.name}"
           '') workspaces;
         };
       }
