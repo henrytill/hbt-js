@@ -11,8 +11,8 @@ import * as esbuild from 'esbuild';
 
 /** @type {esbuild.BuildOptions} */
 const common = { bundle: true, sourcemap: true, logLevel: 'warning' };
-// Not test/cli: the CLI's test spawns it, so it runs under node alone.
-const tests = fs.globSync('test/unit/**/*.test.ts');
+// Not the CLI's test: it spawns the CLI, so it runs under node alone.
+const tests = fs.globSync('packages/hbt/test/**/*.test.ts');
 const browserEntry = [
 	`import * as test from './test/browser/test.ts';`,
 	'test.run(() => {',
@@ -23,7 +23,7 @@ const browserEntry = [
 await Promise.all([
 	esbuild.build({
 		...common,
-		entryPoints: ['src/index.ts'],
+		entryPoints: ['packages/hbt/src/index.ts'],
 		platform: 'browser',
 		format: 'esm',
 		outfile: 'dist/browser/hbt.js',
@@ -32,12 +32,12 @@ await Promise.all([
 	// The unit tests in one classic script, since Chrome refuses
 	// module scripts from file:// URLs. Both node modules they import
 	// resolve to the stand-ins in test/browser/ through
-	// test/unit/tsconfig.json's paths, which esbuild reads as tsc does,
-	// so the two cannot map them differently. browserEntry loads
-	// the test files with require() rather than import, which esbuild
-	// evaluates lazily at the call, so `test.run` can catch a throw
-	// while they load and every test has registered before it runs
-	// them.
+	// packages/hbt/test/tsconfig.json's paths, which esbuild reads as
+	// tsc does, so the two cannot map them differently. browserEntry
+	// loads the test files with require() rather than import, which
+	// esbuild evaluates lazily at the call, so `test.run` can catch a
+	// throw while they load and every test has registered before it
+	// runs them.
 	esbuild.build({
 		...common,
 		stdin: {

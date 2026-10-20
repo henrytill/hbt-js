@@ -1,30 +1,21 @@
 {
-	"name": "hbt",
-	"version": "0.1.0",
+	"name": "@henrytill/hbt-js",
+	"private": true,
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
-	"bin": {
-		"hbt": "dist/tsc/cli/cli.js"
-	},
-	"exports": {
-		".": "./dist/tsc/src/index.js",
-		"./package.json": "./package.json"
-	},
-	"files": [
-		"dist/tsc/src",
-		"dist/tsc/cli",
-		"!dist/tsc/**/*.tsbuildinfo"
+	"workspaces": [
+		"packages/hbt",
+		"packages/hbt-cli"
 	],
 	"scripts": {
-		"clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+		"clean": "node -e \"for (const d of ['dist', 'packages/hbt/dist', 'packages/hbt-cli/dist']) fs.rmSync(d, { recursive: true, force: true })\"",
 		"prebuild": "tsc -b",
 		"build": "node build.mjs",
 		"fmt": "dprint fmt",
 		"pretest": "npm run build",
-		"test": "node --enable-source-maps --test 'dist/tsc/test/**/*.test.js'",
+		"test": "node --enable-source-maps --test 'packages/*/dist/test/**/*.test.js'",
 		"pretest:browser": "npm run build",
-		"test:browser": "node test-browser.mjs",
-		"prepack": "npm run clean && npm run build"
+		"test:browser": "node test-browser.mjs"
 	},
 	"repository": {
 		"type": "git",
@@ -49,10 +40,5 @@
 		"dprint": "^0.57.4",
 		"esbuild": "^0.28.2",
 		"typescript": "^7.0.2"
-	},
-	"dependencies": {
-		"markdown-it": "^15.0.2",
-		"whatwg-url": "^17.1.1",
-		"yaml": "^2.9.1"
 	}
 }

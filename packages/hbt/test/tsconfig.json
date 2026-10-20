@@ -5,15 +5,17 @@
 	// test reaching for what a stand-in lacks fails here rather than
 	// only in the browser; the emitted imports stay node:test and
 	// node:assert/strict, so node runs the real ones.
-	"extends": "../../tsconfig.base.json",
+	"extends": "../../../tsconfig.base.json",
 	"references": [
-		{ "path": "../../src" },
-		{ "path": "../browser" }
+		{ "path": "../src" },
+		{ "path": "../../../test/browser" }
 	],
 	"compilerOptions": {
+		"rootDir": "..",
+		"outDir": "../dist",
 		"paths": {
-			"node:test": ["../browser/test.ts"],
-			"node:assert/strict": ["../browser/assert.ts"]
+			"node:test": ["../../../test/browser/test.ts"],
+			"node:assert/strict": ["../../../test/browser/assert.ts"]
 		}
 	}
 }

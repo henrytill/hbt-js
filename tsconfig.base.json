@@ -20,9 +20,10 @@
 		// imports must resolve as node resolves them.
 		"module": "nodenext",
 
-		// One root and outDir for every project, so dist/tsc mirrors the
-		// source tree: the library in dist/tsc/src, the CLI in
-		// dist/tsc/cli.
+		// The root's own projects build into dist/tsc, mirroring the
+		// tree. Each package's projects override both with the
+		// package's directory and its own dist, which so mirrors the
+		// package: its source in dist/src, its tests in dist/test.
 		"rootDir": ".",
 		"outDir": "./dist/tsc",
 		"composite": true,

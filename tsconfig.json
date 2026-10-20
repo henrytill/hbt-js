@@ -3,10 +3,10 @@
 	// per environment, each named in its own header.
 	"files": [],
 	"references": [
-		{ "path": "./src" },
-		{ "path": "./cli" },
-		{ "path": "./test/unit" },
-		{ "path": "./test/cli" },
+		{ "path": "./packages/hbt/src" },
+		{ "path": "./packages/hbt/test" },
+		{ "path": "./packages/hbt-cli/src" },
+		{ "path": "./packages/hbt-cli/test" },
 		{ "path": "./test/browser" },
 		{ "path": "./tsconfig.scripts.json" }
 	]

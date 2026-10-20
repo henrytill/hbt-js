@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 import * as url from 'node:url';
 
-const CLI = url.fileURLToPath(new URL('../../cli/cli.js', import.meta.url));
+const CLI = url.fileURLToPath(new URL('../src/cli.js', import.meta.url));
 
 const DOCUMENT = `# November 15, 2023
 

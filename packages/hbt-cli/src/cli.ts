@@ -16,12 +16,8 @@ import * as module from 'node:module';
 import * as path from 'node:path';
 import * as util from 'node:util';
 
+import * as hbt from '@henrytill/hbt';
 import * as yaml from 'yaml';
-
-import type { Collection } from '../src/collection.js';
-import { type Label, mkLabel } from '../src/entity.js';
-import { parseMarkdown } from '../src/markdown.js';
-import { formatYaml } from '../src/yaml.js';
 
 /** The `-f` values, shared by all five (henrytill/hbt-data#16). */
 const INPUT_FORMATS = ['json', 'xml', 'markdown', 'html'] as const;
@@ -159,8 +155,10 @@ function version(): string {
 	// By the package's own name, which node resolves through `exports`
 	// wherever the package is, so this does not depend on where the
 	// build puts this file. A JSON import would make tsc copy
-	// package.json into dist/tsc/, which the published files leave out.
-	const { version } = module.createRequire(import.meta.url)('hbt/package.json') as { version: string };
+	// package.json into dist/, which the published files leave out.
+	// The library's version is the same, since this package depends
+	// on that version exactly.
+	const { version } = module.createRequire(import.meta.url)('@henrytill/hbt-cli/package.json') as { version: string };
 	const commit = process.env['HBT_COMMIT_SHORT_HASH'];
 	return commit ? `${version} (${commit})` : version;
 }
@@ -172,10 +170,10 @@ function version(): string {
  */
 const decode = (bytes: Uint8Array): string => new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
 
-function parse(format: InputFormat, input: string): Collection {
+function parse(format: InputFormat, input: string): hbt.collection.Collection {
 	switch (format) {
 		case 'markdown':
-			return parseMarkdown(input);
+			return hbt.markdown.parseMarkdown(input);
 		case 'json':
 		case 'xml':
 		case 'html':
@@ -183,10 +181,10 @@ function parse(format: InputFormat, input: string): Collection {
 	}
 }
 
-function unparse(format: OutputFormat, collection: Collection): string {
+function unparse(format: OutputFormat, collection: hbt.collection.Collection): string {
 	switch (format) {
 		case 'yaml':
-			return formatYaml(collection);
+			return hbt.yaml.formatYaml(collection);
 		case 'html':
 			throw new Error('There is no html formatter yet');
 	}
@@ -199,7 +197,7 @@ function unparse(format: OutputFormat, collection: Collection): string {
  * skipped, as in hbt-rs, where a skipped typo left the labels it was
  * meant to rewrite untouched with no indication why.
  */
-function readMappings(file: string): [Label, Label | null][] {
+function readMappings(file: string): [hbt.entity.Label, hbt.entity.Label | null][] {
 	const contents = withContext(`Could not read mappings file: ${file}`, () => decode(fs.readFileSync(file)));
 	// As Maps, since an object would turn a key of `42` into `'42'`.
 	const doc: unknown = withContext(`Could not parse mappings file: ${file}`, () => yaml.parse(contents, { mapAsMap: true }));
@@ -213,7 +211,7 @@ function readMappings(file: string): [Label, Label | null][] {
 		if (typeof value !== 'string') {
 			throw new Error(`Mapping for ${JSON.stringify(key)} must be a string`);
 		}
-		return [mkLabel(key), value === '' ? null : mkLabel(value)];
+		return [hbt.entity.mkLabel(key), value === '' ? null : hbt.entity.mkLabel(value)];
 	});
 }
 

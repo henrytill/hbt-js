@@ -23,8 +23,30 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        inherit (pkgs) lib;
         src = self;
         npmRoot = self;
+        # The workspace packages, by directory and by name.
+        workspaces = map (dir: {
+          inherit dir;
+          inherit (lib.importJSON (self + "/${dir}/package.json")) name;
+        }) (lib.importJSON (self + "/package.json")).workspaces;
+        library = lib.findFirst (w: w.dir == "packages/hbt") null workspaces;
+        # npm links each workspace package into node_modules by a
+        # relative link into packages/, which neither the store copy of
+        # node_modules below nor the package's has beside it. The scope
+        # directory goes too once empty, or linkNodeModulesHook would
+        # link it into the store, where the shell cannot add to it.
+        rmWorkspaceLinks =
+          nodeModules:
+          let
+            links = map (w: "${nodeModules}/${w.name}") workspaces;
+          in
+          ''
+            rm ${lib.concatStringsSep " " links}
+            rmdir --ignore-fail-on-non-empty ${lib.concatStringsSep " " (lib.unique (map dirOf links))}
+            rm -f ${nodeModules}/.bin/hbt
+          '';
         hbt = pkgs.buildNpmPackage {
           pname = "hbt";
           version = "0.1.0";
@@ -34,11 +56,46 @@
 
           npmConfigHook = pkgs.importNpmLock.npmConfigHook;
 
+          # npmInstallHook installs this workspace's packed files and
+          # bin, under the root package.json's name. npmBuildHook would
+          # build only this workspace, so the build is the root's.
+          npmWorkspace = "packages/hbt-cli";
+          buildPhase = ''
+            runHook preBuild
+            npm run build
+            runHook postBuild
+          '';
+
+          nativeBuildInputs = [ pkgs.jq ];
+
+          # The hook prunes with --workspace, which keeps the root's
+          # devDependencies; pruning at the root first drops them. Its
+          # `npm pack --dry-run` would run prepack, which cleans and
+          # rebuilds, with tsc pruned by then; buildPhase has just built
+          # from clean, so the pack skips it.
+          preInstall = ''
+            npm prune --omit=dev --no-save
+          '';
+          npmPackFlags = [ "--ignore-scripts" ];
+
+          # What the hook leaves of the workspaces is a link to each,
+          # dangling in the output. The CLI imports the library at run
+          # time, so its link becomes the files npm would publish of it,
+          # as an install of hbt-cli from the registry would have them.
+          #
           # The commit `hbt --version` prints, from the variable hbt-rs's
           # flake bakes in. Reading self's revision is what makes a
           # `path:` reference to this flake fail to evaluate, as it does
           # for hbt-rs.
           postInstall = ''
+            nodeModules=$out/lib/node_modules/$(jq -r .name package.json)/node_modules
+            ${rmWorkspaceLinks "$nodeModules"}
+            npm pack --json --dry-run --ignore-scripts --loglevel=warn --workspace=${library.dir} \
+              | jq -r '.[0].files[].path' \
+              | while IFS= read -r file; do
+                  install -D -m 644 "${library.dir}/$file" "$nodeModules/${library.name}/$file"
+                done
+
             wrapProgram $out/bin/hbt \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
           '';
@@ -75,10 +132,30 @@
             importNpmLock.hooks.linkNodeModulesHook
             nodejs
           ];
+          # buildNodeModules installs from package.json and the lockfile
+          # alone, and npm skips a workspace whose directory it cannot
+          # see, dependencies and all; given each one's package.json, it
+          # installs their dependencies. The links to the workspaces
+          # themselves must point into the working tree, so the shell
+          # makes them, and linkNodeModulesHook, which manages only
+          # links into the store, leaves them be.
           npmDeps = pkgs.importNpmLock.buildNodeModules {
             inherit npmRoot;
             inherit (pkgs) nodejs;
+            derivationArgs = {
+              # Rather than the root package.json's name, whose scope
+              # would start the store path with a dash.
+              pname = "hbt-node-modules";
+              postPatch = lib.concatMapStrings (w: ''
+                install -D -m 644 ${npmRoot}/${w.dir}/package.json ${w.dir}/package.json
+              '') workspaces;
+              postInstall = rmWorkspaceLinks "$out/node_modules";
+            };
           };
+          postShellHook = lib.concatMapStrings (w: ''
+            mkdir -p node_modules/${dirOf w.name}
+            ln -sfnr ${w.dir} node_modules/${w.name}
+          '') workspaces;
         };
       }
     );
