@@ -1,10 +1,10 @@
 // Stands in for `node:assert/strict` in the browser bundle (see
-// build.mjs): the five assertions the unit tests use, with strict
-// semantics. `deepEqual` covers what they compare - primitives,
+// scripts/build.mjs): the five assertions the unit tests use, with
+// strict semantics. `deepEqual` covers what they compare - primitives,
 // arrays, Sets, Maps, and objects by prototype and own enumerable
-// properties, as Node does (so `#private` fields are not compared).
-// It throws on any other built-in rather than guessing: a Date has no
-// own properties, so the generic case would call any two equal.
+// properties, as Node does (so `#private` fields are not compared). It
+// throws on any other built-in rather than guessing: a Date has no own
+// properties, so the generic case would call any two equal.
 
 export class AssertionError extends Error {
 	override name = 'AssertionError';
