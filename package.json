@@ -3,10 +3,6 @@
 	"private": true,
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
-	"workspaces": [
-		"packages/hbt",
-		"packages/hbt-cli"
-	],
 	"scripts": {
 		"clean": "npm run clean --workspaces --if-present && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
 		"prebuild": "tsc -b",

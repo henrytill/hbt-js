@@ -24,140 +24,44 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
-        rootPackage = lib.importJSON (self + "/package.json");
-        # A workspace package: its directory, and what its package.json
-        # says of it.
-        workspace =
-          dir:
-          let
-            package = lib.importJSON (self + "/${dir}/package.json");
-          in
-          {
-            inherit dir;
-            inherit (package) name version;
-            # Every kind npm installs for a workspace, peers included.
-            dependencies = lib.mergeAttrsList (
-              map (kind: package.${kind} or { }) [
-                "dependencies"
-                "devDependencies"
-                "optionalDependencies"
-                "peerDependencies"
-              ]
-            );
-          };
-        workspaces = map workspace rootPackage.workspaces;
-        cli = workspace "packages/hbt-cli";
-        # npm nests a dependency under a workspace when the workspaces
-        # need versions no one copy satisfies. Neither the package, which
-        # puts the root's node_modules beside the CLI, nor the dev shell,
-        # whose flattened root holds one copy of each, would keep it, so
-        # both refuse a lockfile that has one.
-        refuseNested =
-          let
-            nested = lib.filter (path: lib.any (w: lib.hasPrefix "${w.dir}/node_modules/" path) workspaces) (
-              lib.attrNames (lib.importJSON (self + "/package-lock.json")).packages
-            );
-          in
-          lib.throwIf (nested != [ ]) "workspaces have nested dependencies, which this flake cannot install: ${toString nested}";
-        # The manifests and the lockfile, and nothing else, so what is
-        # built from them alone is rebuilt when they change and not on
-        # every edit.
-        manifests = lib.fileset.toSource {
-          root = ./.;
-          fileset = lib.fileset.unions (
-            [
-              ./package.json
-              ./package-lock.json
-            ]
-            ++ map (w: ./. + "/${w.dir}/package.json") workspaces
-          );
+        # The CLI's workspace package: its directory, and what its
+        # package.json says of it.
+        cli = {
+          dir = "packages/hbt-cli";
+          inherit (lib.importJSON (self + "/packages/hbt-cli/package.json")) name version;
         };
-        # The dev shell's package.json and lockfile: the workspaces'
-        # dependencies made the root's, and the workspaces themselves
-        # gone, which the shell links into the working tree instead.
-        # Nix only names the dependencies; npm edits package.json and
-        # rewrites the lockfile, offline, from the entries it already
-        # has, and fails rather than resolve a range none of them
-        # satisfies.
-        devManifests =
-          let
-            names = map (w: w.name) workspaces;
-            # One range per dependency: the flattened root holds one, and
-            # picking one of two would check the shell against a range a
-            # workspace never declared.
-            dependencies = lib.mapAttrs (
-              name: ranges:
-              let
-                distinct = lib.unique ranges;
-              in
-              lib.throwIfNot (lib.length distinct == 1)
-                "workspaces declare ${name} as ${lib.concatStringsSep " and " distinct}, which the dev shell cannot flatten"
-                (lib.head distinct)
-            ) (lib.zipAttrs (map (w: removeAttrs w.dependencies names) workspaces));
-          in
-          refuseNested (pkgs.runCommand "hbt-dev-manifests" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
-            cp -r --no-preserve=mode ${manifests}/. .
-            export HOME=$TMPDIR npm_config_cache=$TMPDIR/npm-cache
-            npm pkg delete workspaces
-            # As one JSON object, since npm pkg reads a dot in a key as
-            # nesting, and some names have one (punycode.js, uc.micro).
-            npm pkg set --json ${lib.escapeShellArg "dependencies=${builtins.toJSON dependencies}"}
-            rm -r packages
-            npm install --package-lock-only --offline --ignore-scripts --no-audit --no-fund
-            mkdir $out
-            cp package.json package-lock.json $out
-          '');
-        hbt = refuseNested (pkgs.buildNpmPackage {
+        hbt = pkgs.stdenv.mkDerivation (finalAttrs: {
           pname = "hbt";
           inherit (cli) version;
           src = self;
 
-          npmDeps = pkgs.importNpmLock { npmRoot = self; };
+          nativeBuildInputs = [
+            pkgs.nodejs
+            pkgs.pnpm
+            pkgs.pnpmConfigHook
+            pkgs.pnpmBuildHook
+            pkgs.nodejsInstallExecutables
+            pkgs.makeWrapper
+          ];
+          pnpmDeps = pkgs.fetchPnpmDeps {
+            inherit (finalAttrs) pname version src;
+            fetcherVersion = 4;
+            hash = "sha256-TbpK2jUbR4GhgC5y/ZkY4OVNi74WK9x2EihkXsJS7vo=";
+          };
 
-          npmConfigHook = pkgs.importNpmLock.npmConfigHook;
-
-          # npmInstallHook installs a workspace that imports none of the
-          # others: given npmWorkspace, it would build and prune that one
-          # alone, and copy node_modules with links to the rest that
-          # dangle in the output. So the install is this one, as
-          # `npm install -g` of the CLI's tarball would lay it out: the
-          # CLI at lib/node_modules/<its name>, its production
-          # dependencies beside it, and in place of the link to each
-          # other workspace the tarball npm would publish of it. The
-          # packs skip prepack, which would rebuild with tsc pruned;
-          # npmBuildHook has just built from clean.
           installPhase = ''
             runHook preInstall
-
-            npm prune --omit=dev --no-save
-            find node_modules -maxdepth 1 -type d -empty -delete
-
-            pack=$(mktemp -d)
-            # Unpacks the tarball npm would publish of workspace $1 into $2.
-            unpack() {
-              mkdir -p "$2"
-              tar -xzf "$pack/$(npm pack --ignore-scripts --loglevel=warn --workspace="$1" --pack-destination "$pack")" \
-                --strip-components=1 -C "$2"
-            }
-
             packageOut=$out/lib/node_modules/${cli.name}
-            unpack ${cli.dir} "$packageOut"
-            cp -r node_modules "$packageOut/node_modules"
-            rm -r "$packageOut/node_modules/.bin"
-            # npm's relative links to the workspaces, dangling here.
-            rm ${toString (map (w: "$packageOut/node_modules/${w.name}") workspaces)}
-            ${lib.concatMapStrings (w: ''
-              unpack ${w.dir} "$packageOut/node_modules/${w.name}"
-            '') (lib.filter (w: w.dir != cli.dir) workspaces)}
+            pnpm --filter ${cli.name} deploy --prod --offline "$packageOut"
+            # deploy leaves pnpm's own records, and rewrites package.json
+            # to depend on the library by its path in the build.
+            rm "$packageOut"/{pnpm-lock.yaml,pnpm-workspace.yaml} \
+              "$packageOut"/node_modules/{.modules.yaml,.pnpm-workspace-state-v1.json,.pnpm/lock.yaml}
+            rm -r "$packageOut"/node_modules/.bin
+            install -m 644 ${cli.dir}/package.json "$packageOut"/package.json
             (cd ${cli.dir} && nodejsInstallExecutables)
-
-            # The commit `hbt --version` prints, from the variable
-            # hbt-rs's flake bakes in. Reading self's revision is what
-            # makes a `path:` reference to this flake fail to evaluate,
-            # as it does for hbt-rs.
             wrapProgram $out/bin/hbt \
               --set HBT_COMMIT_SHORT_HASH ${self.shortRev or self.dirtyShortRev}
-
             runHook postInstall
           '';
 
@@ -188,36 +92,14 @@
           });
         };
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
+          packages = [
             hbt-data.packages.${system}.python
-            importNpmLock.hooks.linkNodeModulesHook
-            nodejs
+            pkgs.nodejs
+            pkgs.pnpm
+            pkgs.pnpmConfigHook
           ];
-          # Read from devManifests' output, so evaluating the shell
-          # builds it first: importNpmLock needs the lockfile at
-          # evaluation time. The links to the workspaces point into the
-          # working tree, so the shell makes them, and
-          # linkNodeModulesHook, which manages only links into the store,
-          # leaves them be.
-          npmDeps = pkgs.importNpmLock.buildNodeModules {
-            package = lib.importJSON "${devManifests}/package.json";
-            packageLock = lib.importJSON "${devManifests}/package-lock.json";
-            inherit (pkgs) nodejs;
-            # Rather than the root package.json's name, whose scope would
-            # start the store path with a dash.
-            derivationArgs.pname = "hbt-node-modules";
-          };
-          # linkNodeModulesHook links into $npmRoot when it is set, and
-          # into the current directory otherwise, so `nix develop` from
-          # a subdirectory would make a node_modules there; it runs this
-          # first, and the links to the workspaces after, at the root.
-          preShellHook = ''
-            npmRoot=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-          '';
-          postShellHook = lib.concatMapStrings (w: ''
-            mkdir -p "$npmRoot/node_modules/${dirOf w.name}"
-            ln -sfnr "$npmRoot/${w.dir}" "$npmRoot/node_modules/${w.name}"
-          '') workspaces;
+          inherit (hbt) pnpmDeps;
+          shellHook = "pnpmConfigHook";
         };
       }
     );

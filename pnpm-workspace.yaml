@@ -1,0 +1,6 @@
+packages:
+  - packages/hbt
+  - packages/hbt-cli
+allowBuilds:
+  dprint: true
+  esbuild: true

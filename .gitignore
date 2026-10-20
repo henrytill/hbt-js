@@ -1,5 +1,5 @@
 /dist/
 /packages/*/dist/
-/node_modules/
+node_modules/
 /result
 CLAUDE.md
