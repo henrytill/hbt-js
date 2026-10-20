@@ -4,7 +4,7 @@
 // every test passed.
 // The browser is `chromium` on PATH, or whatever CHROMIUM names:
 //
-//   CHROMIUM='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' npm run test:browser
+//   CHROMIUM='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' pnpm run test:browser
 import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
