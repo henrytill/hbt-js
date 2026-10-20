@@ -69,9 +69,9 @@
             pack=$(mktemp -d)
             # Unpacks the tarball npm would publish of workspace $1 into $2.
             unpack() {
-              mkdir -p "$pack/$1" "$2"
-              npm pack --ignore-scripts --loglevel=warn --workspace="$1" --pack-destination "$pack/$1" >/dev/null
-              tar -xzf "$pack/$1"/*.tgz --strip-components=1 -C "$2"
+              mkdir -p "$2"
+              tar -xzf "$pack/$(npm pack --ignore-scripts --loglevel=warn --workspace="$1" --pack-destination "$pack")" \
+                --strip-components=1 -C "$2"
             }
 
             packageOut=$out/lib/node_modules/${cli.name}
