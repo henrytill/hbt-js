@@ -16,6 +16,9 @@ import * as url from 'node:url';
 // puts its output.
 import * as test from '../test/browser/test.ts';
 
+// Every path below is the repository's, wherever this is run from.
+process.chdir(path.join(import.meta.dirname, '..'));
+
 const browser = process.env['CHROMIUM'] ?? 'chromium';
 const page = url.pathToFileURL(path.resolve('dist/test/browser/index.html')).href;
 
