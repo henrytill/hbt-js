@@ -13,7 +13,7 @@
 	],
 	"scripts": {
 		"clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
-		"prepack": "npm run clean && tsc -b src"
+		"prepack": "pnpm run clean && tsc -b src"
 	},
 	"repository": {
 		"type": "git",
