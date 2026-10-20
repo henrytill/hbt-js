@@ -99,7 +99,9 @@
             cp -r --no-preserve=mode ${manifests}/. .
             export HOME=$TMPDIR npm_config_cache=$TMPDIR/npm-cache
             npm pkg delete workspaces
-            npm pkg set ${lib.escapeShellArgs (lib.mapAttrsToList (n: v: "dependencies.${n}=${v}") dependencies)}
+            # As one JSON object, since npm pkg reads a dot in a key as
+            # nesting, and some names have one (punycode.js, uc.micro).
+            npm pkg set --json ${lib.escapeShellArg "dependencies=${builtins.toJSON dependencies}"}
             rm -r packages
             npm install --package-lock-only --offline --ignore-scripts --no-audit --no-fund
             mkdir $out
