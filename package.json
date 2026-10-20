@@ -8,7 +8,7 @@
 		"packages/hbt-cli"
 	],
 	"scripts": {
-		"clean": "node -e \"for (const d of ['dist', 'packages/hbt/dist', 'packages/hbt-cli/dist']) fs.rmSync(d, { recursive: true, force: true })\"",
+		"clean": "node -e \"for (const d of ['dist', ...fs.globSync('packages/*/dist')]) fs.rmSync(d, { recursive: true, force: true })\"",
 		"prebuild": "tsc -b",
 		"build": "node build.mjs",
 		"fmt": "dprint fmt",
