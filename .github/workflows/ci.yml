@@ -32,7 +32,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      # Each builds first, the second time with nothing to do.
+      # Each builds first: tsc has nothing to do the second time, and
+      # esbuild takes a fraction of a second.
       - run: pnpm test
       # GitHub's Ubuntu runners ship Google Chrome.
       - run: pnpm run test:browser
