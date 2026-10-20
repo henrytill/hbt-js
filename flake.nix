@@ -35,7 +35,15 @@
           {
             inherit dir;
             inherit (package) name version;
-            dependencies = package.dependencies or { };
+            # Every kind npm installs for a workspace, peers included.
+            dependencies = lib.mergeAttrsList (
+              map (kind: package.${kind} or { }) [
+                "dependencies"
+                "devDependencies"
+                "optionalDependencies"
+                "peerDependencies"
+              ]
+            );
           };
         workspaces = map workspace rootPackage.workspaces;
         cli = workspace "packages/hbt-cli";
