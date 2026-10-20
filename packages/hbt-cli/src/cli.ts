@@ -156,8 +156,8 @@ function version(): string {
 	// wherever the package is, so this does not depend on where the
 	// build puts this file. A JSON import would make tsc copy
 	// package.json into dist/, which the published files leave out.
-	// The library's version is the same, since this package depends
-	// on that version exactly.
+	// The library's version is the same: this package depends on that
+	// version exactly, and its test checks that the two agree.
 	const { version } = module.createRequire(import.meta.url)('@henrytill/hbt-cli/package.json') as { version: string };
 	const commit = process.env['HBT_COMMIT_SHORT_HASH'];
 	return commit ? `${version} (${commit})` : version;
