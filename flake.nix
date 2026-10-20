@@ -27,12 +27,13 @@
         src = self;
         npmRoot = self;
         rootPackage = lib.importJSON (self + "/package.json");
-        # The workspace packages, by directory and by name.
-        workspaces = map (dir: {
+        # A workspace package, by directory and by name.
+        workspace = dir: {
           inherit dir;
           inherit (lib.importJSON (self + "/${dir}/package.json")) name;
-        }) rootPackage.workspaces;
-        library = lib.findFirst (w: w.dir == "packages/hbt") null workspaces;
+        };
+        workspaces = map workspace rootPackage.workspaces;
+        library = workspace "packages/hbt";
         # npm links each workspace package into node_modules by a
         # relative link into packages/, which neither the store copy of
         # node_modules below nor the package's has beside it. The scope
