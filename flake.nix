@@ -78,13 +78,11 @@
             ''
               mkdir $out
               tar --zstd -xf ${hbt.pnpmDeps}/pnpm-store.tar.zst -C $out
-              chmod -R +w $out
               # Kept as SQL by fetchPnpmDeps, since the database file is not
-              # reproducible.
-              if [ -f $out/v11/index.db.sql ]; then
-                sqlite3 $out/v11/index.db < $out/v11/index.db.sql
-                rm $out/v11/index.db.sql
-              fi
+              # reproducible; the layout is fetcherVersion 4's.
+              chmod u+w $out/v11
+              sqlite3 $out/v11/index.db < $out/v11/index.db.sql
+              rm $out/v11/index.db.sql
             '';
       in
       {
