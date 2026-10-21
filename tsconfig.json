@@ -7,7 +7,6 @@
 		{ "path": "./packages/hbt/test" },
 		{ "path": "./packages/hbt-cli/src" },
 		{ "path": "./packages/hbt-cli/test" },
-		{ "path": "./test/browser" },
 		{ "path": "./scripts" }
 	]
 }

@@ -5,8 +5,6 @@
 	"extends": ["../tsconfig.base.json", "@tsconfig/node24/tsconfig.json"],
 	"include": ["*.mjs"],
 	"compilerOptions": {
-		"rootDir": "..",
-		"outDir": "../dist/tsc",
 		"allowJs": true,
 		"noEmit": true
 	}

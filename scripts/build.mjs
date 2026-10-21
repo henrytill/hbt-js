@@ -19,11 +19,13 @@ process.chdir(root);
 /** @type {esbuild.BuildOptions} */
 const common = { bundle: true, sourcemap: true, logLevel: 'warning', absWorkingDir: root };
 // Not the CLI's test: it spawns the CLI, so it runs under node alone.
-const tests = fs.globSync('packages/hbt/test/**/*.test.ts');
+const testDir = 'packages/hbt/test';
+const tests = fs.globSync('**/*.test.ts', { cwd: testDir });
 // The page's runner, which the stand-in for node:test registers the
-// tests with.
+// tests with. The entry sits among them (resolveDir below), so its
+// paths are the tests' directory's.
 const browserEntry = [
-	`import * as page from './test/browser/page.ts';`,
+	`import * as page from './stubs/page.ts';`,
 	'page.run(() => {',
 	...tests.map((t) => `\trequire('./${t}');`),
 	'});',
@@ -40,7 +42,7 @@ await Promise.all([
 
 	// The unit tests in one classic script, since Chrome refuses
 	// module scripts from file:// URLs. Both node modules they import
-	// resolve to the stand-ins in test/browser/ through
+	// resolve to the stand-ins in packages/hbt/test/stubs/ through
 	// packages/hbt/test/tsconfig.json's paths, which esbuild reads as
 	// tsc does, so the two cannot map them differently. browserEntry
 	// loads the test files with require() rather than import, which
@@ -51,7 +53,7 @@ await Promise.all([
 		...common,
 		stdin: {
 			contents: browserEntry.join('\n'),
-			resolveDir: '.',
+			resolveDir: testDir,
 			sourcefile: 'tests.ts',
 			loader: 'ts',
 		},
@@ -61,4 +63,4 @@ await Promise.all([
 	}),
 ]);
 
-fs.copyFileSync('test/browser/index.html', 'dist/test/browser/index.html');
+fs.copyFileSync(`${testDir}/stubs/index.html`, 'dist/test/browser/index.html');

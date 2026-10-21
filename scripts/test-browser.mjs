@@ -48,10 +48,10 @@ if (result.error !== undefined) {
 	process.exit(2);
 }
 
-// test/browser/page.ts writes its report as JSON into the empty
-// <script id="report">, whose text the page serializes verbatim, so
-// all that is left to parse is the JSON. Still empty means the bundle
-// never got as far as writing it, which fails too.
+// packages/hbt/test/stubs/page.ts writes its report as JSON into
+// the empty <script id="report">, whose text the page serializes
+// verbatim, so all that is left to parse is the JSON. Still empty
+// means the bundle never got as far as writing it, which fails too.
 // The report is the lines the page shows, already formatted, so this
 // only prints them.
 const json = /<script\b[^>]*\bid="report"[^>]*>([\s\S]*?)<\/script>/.exec(result.stdout)?.[1];
