@@ -19,7 +19,7 @@ declare const document: {
 };
 declare const navigator: { userAgent: string };
 
-export type Test = { readonly suites: readonly string[]; readonly name: string; readonly fn: () => unknown };
+type Test = { readonly suites: readonly string[]; readonly name: string; readonly fn: () => unknown };
 type Result = { readonly suites: readonly string[]; readonly name: string; readonly ok: boolean; readonly error?: string };
 type Outcome = { readonly tests: readonly Result[]; readonly loadError?: string };
 type Line = { readonly className: string; readonly text: string };
