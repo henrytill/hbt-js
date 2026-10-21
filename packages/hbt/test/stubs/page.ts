@@ -23,7 +23,6 @@ type Test = { readonly suites: readonly string[]; readonly name: string; readonl
 type Result = { readonly suites: readonly string[]; readonly name: string; readonly ok: boolean; readonly error?: string };
 type Outcome = { readonly tests: readonly Result[]; readonly loadError?: string };
 type Line = { readonly className: string; readonly text: string };
-type Formatted = { readonly lines: readonly Line[]; readonly summary: Line; readonly passed: boolean };
 
 const tests: Test[] = [];
 
@@ -67,19 +66,19 @@ export async function run(load: () => void): Promise<void> {
 // scripts/test-browser.mjs prints the same lines without formatting
 // them itself. className is what the page's stylesheet colours each
 // line by.
-function format(report: Outcome): Formatted {
+function format(outcome: Outcome): { readonly lines: readonly Line[]; readonly summary: Line; readonly passed: boolean } {
 	const lines: Line[] = [];
-	for (const { suites, name, ok, error } of report.tests) {
+	for (const { suites, name, ok, error } of outcome.tests) {
 		lines.push({ className: ok ? 'pass' : 'fail', text: `${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}` });
 		if (error !== undefined) lines.push({ className: 'error', text: error.replaceAll(/^/gm, '  ') });
 	}
-	const failed = report.tests.filter((t) => !t.ok).length;
-	const passed = report.loadError === undefined && failed === 0;
-	const text = report.loadError !== undefined ?
-		`ERROR ${report.loadError}` :
+	const failed = outcome.tests.filter((t) => !t.ok).length;
+	const passed = outcome.loadError === undefined && failed === 0;
+	const text = outcome.loadError !== undefined ?
+		`ERROR ${outcome.loadError}` :
 		passed ?
-		`PASS ${report.tests.length}` :
-		`FAIL ${failed} of ${report.tests.length}`;
+		`PASS ${outcome.tests.length}` :
+		`FAIL ${failed} of ${outcome.tests.length}`;
 	return { lines, summary: { className: `summary ${passed ? 'pass' : 'fail'}`, text }, passed };
 }
 
