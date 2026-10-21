@@ -47,6 +47,13 @@ export async function run(load: () => void): Promise<void> {
 		write({ tests: [], loadError: String(e) });
 		return;
 	}
+	// Nothing registered means the test files' describe and it reached
+	// another copy of this module, or none were loaded at all; either
+	// way an empty run would otherwise report PASS 0.
+	if (tests.length === 0) {
+		write({ tests: [], loadError: 'no tests registered' });
+		return;
+	}
 	const results: Result[] = [];
 	for (const { suites, name, fn } of tests) {
 		try {
