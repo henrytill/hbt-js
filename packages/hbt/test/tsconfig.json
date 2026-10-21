@@ -1,19 +1,18 @@
 {
 	// The unit tests, which run in a browser as well as under node.
-	// They are typed against the stand-ins in test/browser, and esbuild
-	// reads these paths too when scripts/build.mjs bundles them for the
+	// They are typed against the stand-ins in stubs/, and esbuild reads
+	// these paths too when scripts/build.mjs bundles them for the
 	// browser, so a test reaching for what a stand-in lacks fails here
 	// rather than only in the browser; the emitted imports stay
 	// node:test and node:assert/strict, so node runs the real ones.
+	// The stand-ins declare the few browser globals they use, so the
+	// project keeps the base's environment.
 	"extends": "../../../tsconfig.base.json",
-	"references": [
-		{ "path": "../src" },
-		{ "path": "../../../test/browser" }
-	],
+	"references": [{ "path": "../src" }],
 	"compilerOptions": {
 		"paths": {
-			"node:test": ["../../../test/browser/test.ts"],
-			"node:assert/strict": ["../../../test/browser/assert.ts"]
+			"node:test": ["./stubs/test.ts"],
+			"node:assert/strict": ["./stubs/assert.ts"]
 		}
 	}
 }

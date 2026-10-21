@@ -70,4 +70,15 @@ export function throws(fn: () => unknown, expected?: (new (...args: never[]) => 
 	fail(message, 'expected a throw');
 }
 
-export default { ok, equal, notEqual, deepEqual, throws, AssertionError };
+// Typed by hand: the tests call `assert.ok`, an assertion function,
+// through this object, and TypeScript accepts that only when the
+// object's type is declared rather than inferred (TS2775).
+const strict: {
+	readonly ok: typeof ok;
+	readonly equal: typeof equal;
+	readonly notEqual: typeof notEqual;
+	readonly deepEqual: typeof deepEqual;
+	readonly throws: typeof throws;
+	readonly AssertionError: typeof AssertionError;
+} = { ok, equal, notEqual, deepEqual, throws, AssertionError };
+export default strict;

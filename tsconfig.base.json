@@ -24,8 +24,9 @@
 		// test - and both of a package's projects build into its dist,
 		// which so mirrors the package: its source in dist/src, its
 		// tests in dist/test. ${configDir} is the directory of the
-		// tsconfig.json that extends this. The root's own projects
-		// override both.
+		// tsconfig.json that extends this. They fit scripts/ too, the
+		// one project outside the packages: the repository, and the
+		// root's dist.
 		"rootDir": "${configDir}/..",
 		"outDir": "${configDir}/../dist",
 		"composite": true,
