@@ -11,11 +11,6 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
 
-// The same formatting the page uses, straight from the stand-in's
-// source, so this needs neither a build nor knowledge of where tsc
-// puts its output.
-import * as test from '../test/browser/test.ts';
-
 // Every path below is the repository's, wherever this is run from.
 process.chdir(path.join(import.meta.dirname, '..'));
 
@@ -57,14 +52,15 @@ if (result.error !== undefined) {
 // <script id="report">, whose text the page serializes verbatim, so
 // all that is left to parse is the JSON. Still empty means the bundle
 // never got as far as writing it, which fails too.
+// The report is the lines the page shows, already formatted, so this
+// only prints them.
 const json = /<script\b[^>]*\bid="report"[^>]*>([\s\S]*?)<\/script>/.exec(result.stdout)?.[1];
 if (json === undefined || json === '') {
 	console.error(`no report in the page ${browser} returned`);
 	process.exit(1);
 }
-/** @type {test.Report} */
-const report = JSON.parse(json);
-const { lines, summary, passed } = test.format(report);
-console.log(`# ${report.userAgent}`);
+/** @type {{ userAgent: string, lines: { text: string }[], summary: { text: string }, passed: boolean }} */
+const { userAgent, lines, summary, passed } = JSON.parse(json);
+console.log(`# ${userAgent}`);
 for (const { text } of [...lines, summary]) console.log(text);
 process.exitCode = passed ? 0 : 1;
