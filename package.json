@@ -4,7 +4,7 @@
 	"description": "Heterogeneous Bookmark Transformation",
 	"type": "module",
 	"scripts": {
-		"clean": "pnpm -r --if-present run clean && node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+		"clean": "pnpm -r --if-present run clean && node scripts/clean.mjs",
 		"prebuild": "tsc -b",
 		"build": "node scripts/build.mjs",
 		"fmt": "dprint fmt",

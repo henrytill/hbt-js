@@ -14,7 +14,7 @@
 		"!dist/**/*.tsbuildinfo"
 	],
 	"scripts": {
-		"clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+		"clean": "node ../../scripts/clean.mjs",
 		"prepack": "pnpm run clean && tsc -b src"
 	},
 	"repository": {
