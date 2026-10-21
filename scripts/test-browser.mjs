@@ -48,7 +48,7 @@ if (result.error !== undefined) {
 	process.exit(2);
 }
 
-// test/browser/test.ts writes its report as JSON into the empty
+// test/browser/page.ts writes its report as JSON into the empty
 // <script id="report">, whose text the page serializes verbatim, so
 // all that is left to parse is the JSON. Still empty means the bundle
 // never got as far as writing it, which fails too.

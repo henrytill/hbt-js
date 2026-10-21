@@ -20,9 +20,11 @@ process.chdir(root);
 const common = { bundle: true, sourcemap: true, logLevel: 'warning', absWorkingDir: root };
 // Not the CLI's test: it spawns the CLI, so it runs under node alone.
 const tests = fs.globSync('packages/hbt/test/**/*.test.ts');
+// The page's runner, which the stand-in for node:test registers the
+// tests with.
 const browserEntry = [
-	`import * as test from './test/browser/test.ts';`,
-	'test.run(() => {',
+	`import * as page from './test/browser/page.ts';`,
+	'page.run(() => {',
 	...tests.map((t) => `\trequire('./${t}');`),
 	'});',
 ];
@@ -42,7 +44,7 @@ await Promise.all([
 	// packages/hbt/test/tsconfig.json's paths, which esbuild reads as
 	// tsc does, so the two cannot map them differently. browserEntry
 	// loads the test files with require() rather than import, which
-	// esbuild evaluates lazily at the call, so `test.run` can catch a
+	// esbuild evaluates lazily at the call, so `page.run` can catch a
 	// throw while they load and every test has registered before it
 	// runs them.
 	esbuild.build({
