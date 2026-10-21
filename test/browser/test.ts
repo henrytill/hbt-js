@@ -3,7 +3,7 @@
 // and a runner that writes the outcome into the page twice - as lines
 // in <pre id="result"> for a person, and as JSON in
 // <script id="report"> for scripts/test-browser.mjs, which reads it
-// back from `chromium --dump-dom`.
+// back from `chromium --dump-dom` and prints the same lines.
 
 // Declared by hand rather than through lib "dom", which would let the
 // library reach for browser globals too.
@@ -17,7 +17,9 @@ declare const navigator: { userAgent: string };
 
 type Test = { readonly suites: readonly string[]; readonly name: string; readonly fn: () => unknown };
 type Result = { readonly suites: readonly string[]; readonly name: string; readonly ok: boolean; readonly error?: string };
-export type Report = { readonly userAgent: string; readonly tests: readonly Result[]; readonly loadError?: string };
+type Outcome = { readonly tests: readonly Result[]; readonly loadError?: string };
+type Line = { readonly className: string; readonly text: string };
+type Formatted = { readonly lines: readonly Line[]; readonly summary: Line; readonly passed: boolean };
 
 const tests: Test[] = [];
 const suites: string[] = [];
@@ -66,13 +68,12 @@ export async function run(load: () => void): Promise<void> {
 	write({ tests: results });
 }
 
-export type Line = { readonly className: string; readonly text: string };
-
-// The report as text - a line per test and error, and a summary - for
-// both the page and scripts/test-browser.mjs, which imports this file's
-// source so that the two cannot drift apart. className is what the
-// page's stylesheet colours each line by.
-export function format(report: Report): { readonly lines: readonly Line[]; readonly summary: Line; readonly passed: boolean } {
+// The outcome as text - a line per test and error, and a summary -
+// which the page shows and the report carries, so that
+// scripts/test-browser.mjs prints the same lines without formatting
+// them itself. className is what the page's stylesheet colours each
+// line by.
+function format(report: Outcome): Formatted {
 	const lines: Line[] = [];
 	for (const { suites, name, ok, error } of report.tests) {
 		lines.push({ className: ok ? 'pass' : 'fail', text: `${ok ? 'ok' : 'not ok'} - ${[...suites, name].join(' > ')}` });
@@ -95,9 +96,9 @@ function span({ className, text }: Line): Element {
 	return span;
 }
 
-function write(outcome: Omit<Report, 'userAgent'>): void {
-	const report = { userAgent: navigator.userAgent, ...outcome };
-	const { lines, summary } = format(report);
+function write(outcome: Outcome): void {
+	const report = { userAgent: navigator.userAgent, ...format(outcome) };
+	const { lines, summary } = report;
 	document.title = `${summary.text} - hbt unit tests`;
 	document.getElementById('result')?.replaceChildren(...[...lines, summary].map(span));
 
