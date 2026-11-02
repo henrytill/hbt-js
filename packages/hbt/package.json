@@ -30,8 +30,8 @@
 	},
 	"homepage": "https://github.com/henrytill/hbt-js#readme",
 	"dependencies": {
-		"markdown-it": "^15.0.2",
-		"whatwg-url": "^17.1.1",
+		"markdown-it": "^15.0.3",
+		"whatwg-url": "^17.3.0",
 		"yaml": "^2.9.1"
 	}
 }
