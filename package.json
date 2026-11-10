@@ -14,13 +14,13 @@
 		"test:browser": "node scripts/test-browser.mjs"
 	},
 	"devDependencies": {
-		"@dprint/json": "^0.24.0",
-		"@dprint/markdown": "^0.24.0",
+		"@dprint/json": "^0.25.2",
+		"@dprint/markdown": "^0.26.0",
 		"@dprint/typescript": "^0.96.1",
 		"@tsconfig/node24": "^24.0.5",
 		"@tsconfig/strictest": "^2.0.8",
-		"@types/node": "^24.13.6",
-		"dprint": "^0.57.4",
+		"@types/node": "^24.19.2",
+		"dprint": "^0.64.0",
 		"esbuild": "^0.28.2",
 		"typescript": "^7.0.2"
 	}
